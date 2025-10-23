@@ -15,6 +15,7 @@ public:
     virtual ~Material() = default;
     virtual bool scatter(const core::Ray& ray_in, const geometry::HitRecord& rec, 
                         Color& attenuation, core::Ray& scattered) const = 0;
+    virtual Color emit() const { return Color(0, 0, 0); }
 };
 
 } // namespace materials

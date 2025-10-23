@@ -14,6 +14,22 @@ public:
     void set_pixel(int x, int y, const Color& color);
     Color get_pixel(int x, int y) const;
     
+    /**
+     * @brief Adds a sample to the accumulation buffer for progressive rendering
+     * 
+     * @param x Pixel x coordinate
+     * @param y Pixel y coordinate
+     * @param color Sample color to accumulate
+     */
+    void add_sample(int x, int y, const Color& color);
+    
+    /**
+     * @brief Updates the display buffer from the accumulation buffer
+     * 
+     * @param sample_count Number of samples accumulated so far
+     */
+    void update_display(int sample_count);
+    
     int width() const { return width_; }
     int height() const { return height_; }
     
@@ -24,7 +40,8 @@ public:
 
 private:
     int width_, height_;
-    std::vector<Color> pixels_;
+    std::vector<Color> pixels_;           // Display buffer
+    std::vector<Color> accumulation_;     // Accumulation buffer for progressive rendering
 };
 
 } // namespace rendering

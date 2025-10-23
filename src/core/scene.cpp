@@ -7,8 +7,13 @@ void Scene::add(std::shared_ptr<geometry::Primitive> object) {
     objects_.push_back(object);
 }
 
+void Scene::add_light(std::shared_ptr<Light> light) {
+    lights_.push_back(light);
+}
+
 void Scene::clear() {
     objects_.clear();
+    lights_.clear();
 }
 
 bool Scene::hit(const Ray& ray, float t_min, float t_max, geometry::HitRecord& rec) const {

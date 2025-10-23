@@ -19,6 +19,24 @@ public:
 private:
     Point3 v0_, v1_, v2_;
     std::shared_ptr<materials::Material> material_;
+    
+    /**
+     * @brief Computes UV coordinates using barycentric coordinates
+     * 
+     * @param u Barycentric coordinate u
+     * @param v Barycentric coordinate v
+     * @param out_u Output U coordinate [0, 1]
+     * @param out_v Output V coordinate [0, 1]
+     */
+    void compute_uv(float u, float v, float& out_u, float& out_v) const;
+    
+    /**
+     * @brief Computes tangent space vectors for normal mapping
+     * 
+     * @param normal Surface normal at hit point
+     * @param rec Hit record to store tangent and bitangent
+     */
+    void compute_tangent_space(const Vec3& normal, HitRecord& rec) const;
 };
 
 } // namespace geometry

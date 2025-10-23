@@ -14,6 +14,7 @@ public:
     
     bool should_close() const;
     void poll_events();
+    void update();  // New: actually draw to screen
     void swap_buffers();
     
     void display_framebuffer(const rendering::Framebuffer& framebuffer);
@@ -25,11 +26,9 @@ public:
 private:
     GLFWwindow* window_;
     int width_, height_;
-    unsigned int texture_;
-    unsigned int VAO_, VBO_;
+    std::vector<unsigned char> pixel_buffer_;  // RGB pixel data
     
-    void setup_opengl();
-    void create_quad();
+    void draw_pixels();
 };
 
 } // namespace viewer

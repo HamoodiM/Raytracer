@@ -11,6 +11,7 @@ public:
 
     bool scatter(const core::Ray& ray_in, const geometry::HitRecord& rec, 
                 Color& attenuation, core::Ray& scattered) const override;
+    Color emit() const override { return emit_; }
 
 private:
     Color emit_;

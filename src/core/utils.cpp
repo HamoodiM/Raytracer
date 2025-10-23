@@ -34,6 +34,21 @@ Vec3 random_unit_vector() {
     return glm::normalize(random_in_unit_sphere());
 }
 
+// Utility functions
+float clamp(float x, float min, float max) {
+    if (x < min) return min;
+    if (x > max) return max;
+    return x;
+}
+
+Vec3 reflect(const Vec3& v, const Vec3& n) {
+    return v - 2.0f * glm::dot(v, n) * n;
+}
+
+Color gamma_correct(const Color& c, float gamma) {
+    return Color(pow(c.r, 1.0f/gamma), pow(c.g, 1.0f/gamma), pow(c.b, 1.0f/gamma));
+}
+
 // Helper function for random integer
 int random_int(int min, int max) {
     static std::uniform_int_distribution<int> distribution(min, max);

@@ -1,0 +1,70 @@
+{
+  "camera": {
+    "position": [0, 0, 4],
+    "look_at": [0, 0, 0],
+    "vup": [0, 1, 0],
+    "vfov": 40,
+    "aspect_ratio": 1.333,
+    "aperture": 0.2,
+    "focus_distance": 4.0
+  },
+  "objects": [
+    {
+      "type": "plane",
+      "point": [0, -2, 0],
+      "normal": [0, 1, 0],
+      "material": {
+        "type": "lambertian",
+        "albedo": [0.1, 0.1, 0.1]
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [-1.2, 0, 0],
+      "radius": 0.8,
+      "material": {
+        "type": "dielectric",
+        "ir": 1.5
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [0, 0, 0],
+      "radius": 0.8,
+      "material": {
+        "type": "dielectric",
+        "ir": 2.4
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [1.2, 0, 0],
+      "radius": 0.8,
+      "material": {
+        "type": "dielectric",
+        "ir": 1.33
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [0, 0, -1.5],
+      "radius": 0.3,
+      "material": {
+        "type": "lambertian",
+        "albedo": [0.8, 0.2, 0.2]
+      }
+    }
+  ],
+  "lights": [
+    {
+      "type": "point",
+      "position": [0, 3, 2],
+      "intensity": [15, 15, 15]
+    },
+    {
+      "type": "point",
+      "position": [-2, 1, 1],
+      "intensity": [8, 8, 12]
+    }
+  ]
+}

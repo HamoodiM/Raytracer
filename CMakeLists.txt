@@ -28,7 +28,18 @@ if(OpenMP_CXX_FOUND)
     message(STATUS "OpenMP found - enabling multi-threading")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 else()
-    message(WARNING "OpenMP not found - single-threaded rendering only")
+    # Try to find OpenMP manually on macOS
+    find_library(OPENMP_LIBRARY omp PATHS /opt/homebrew/opt/libomp/lib /usr/local/opt/libomp/lib)
+    find_path(OPENMP_INCLUDE_DIR omp.h PATHS /opt/homebrew/opt/libomp/include /usr/local/opt/libomp/include)
+    
+    if(OPENMP_LIBRARY AND OPENMP_INCLUDE_DIR)
+        message(STATUS "OpenMP found manually - enabling multi-threading")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lomp")
+        include_directories(${OPENMP_INCLUDE_DIR})
+    else()
+        message(WARNING "OpenMP not found - single-threaded rendering only")
+    endif()
 endif()
 
 # Include directories
@@ -41,6 +52,10 @@ set(CORE_SOURCES
     src/core/camera.cpp
     src/core/scene.cpp
     src/core/utils.cpp
+    src/core/light.cpp
+    src/core/scene_builder.cpp
+    src/core/scene_loader.cpp
+    src/core/scene_gallery.cpp
 )
 
 set(GEOMETRY_SOURCES
@@ -54,9 +69,17 @@ set(GEOMETRY_SOURCES
 set(MATERIAL_SOURCES
     src/materials/material.cpp
     src/materials/lambertian.cpp
+    src/materials/textured_lambertian.cpp
     src/materials/metal.cpp
     src/materials/dielectric.cpp
     src/materials/emissive.cpp
+)
+
+set(TEXTURE_SOURCES
+    src/textures/texture.cpp
+    src/textures/image_texture.cpp
+    src/textures/checker_texture.cpp
+    src/textures/normal_map.cpp
 )
 
 set(ACCELERATION_SOURCES
@@ -68,11 +91,13 @@ set(RENDERING_SOURCES
     src/rendering/renderer.cpp
     src/rendering/integrator.cpp
     src/rendering/framebuffer.cpp
+    src/rendering/progressive_renderer.cpp
 )
 
 set(VIEWER_SOURCES
     src/viewer/window.cpp
     src/viewer/controller.cpp
+    src/viewer/camera_controller.cpp
 )
 
 # Header files
@@ -81,6 +106,10 @@ set(HEADERS
     src/core/camera.h
     src/core/scene.h
     src/core/utils.h
+    src/core/light.h
+    src/core/scene_builder.h
+    src/core/scene_loader.h
+    src/core/scene_gallery.h
     src/geometry/primitive.h
     src/geometry/sphere.h
     src/geometry/plane.h
@@ -88,16 +117,23 @@ set(HEADERS
     src/geometry/mesh.h
     src/materials/material.h
     src/materials/lambertian.h
+    src/materials/textured_lambertian.h
     src/materials/metal.h
     src/materials/dielectric.h
     src/materials/emissive.h
+    src/textures/texture.h
+    src/textures/image_texture.h
+    src/textures/checker_texture.h
+    src/textures/normal_map.h
     src/acceleration/aabb.h
     src/acceleration/bvh.h
     src/rendering/renderer.h
     src/rendering/integrator.h
     src/rendering/framebuffer.h
+    src/rendering/progressive_renderer.h
     src/viewer/window.h
     src/viewer/controller.h
+    src/viewer/camera_controller.h
 )
 
 # Create executable
@@ -106,6 +142,7 @@ add_executable(raytracer
     ${CORE_SOURCES}
     ${GEOMETRY_SOURCES}
     ${MATERIAL_SOURCES}
+    ${TEXTURE_SOURCES}
     ${ACCELERATION_SOURCES}
     ${RENDERING_SOURCES}
     ${VIEWER_SOURCES}

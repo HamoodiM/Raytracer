@@ -1,0 +1,76 @@
+{
+  "camera": {
+    "position": [0, 0, 6],
+    "look_at": [0, 0, 0],
+    "vup": [0, 1, 0],
+    "vfov": 40,
+    "aspect_ratio": 1.333,
+    "aperture": 0.0,
+    "focus_distance": 6.0
+  },
+  "objects": [
+    {
+      "type": "plane",
+      "point": [0, -2, 0],
+      "normal": [0, 1, 0],
+      "material": {
+        "type": "lambertian",
+        "albedo": [0.2, 0.2, 0.2]
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [-2.5, 0, 0],
+      "radius": 0.8,
+      "material": {
+        "type": "lambertian",
+        "albedo": [0.7, 0.3, 0.3]
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [-1.25, 0, 0],
+      "radius": 0.8,
+      "material": {
+        "type": "metal",
+        "albedo": [0.8, 0.8, 0.9],
+        "fuzz": 0.0
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [0, 0, 0],
+      "radius": 0.8,
+      "material": {
+        "type": "metal",
+        "albedo": [0.7, 0.6, 0.5],
+        "fuzz": 0.1
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [1.25, 0, 0],
+      "radius": 0.8,
+      "material": {
+        "type": "dielectric",
+        "ir": 1.5
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [2.5, 0, 0],
+      "radius": 0.8,
+      "material": {
+        "type": "emissive",
+        "emission": [2, 2, 2]
+      }
+    }
+  ],
+  "lights": [
+    {
+      "type": "point",
+      "position": [0, 3, 2],
+      "intensity": [12, 12, 12]
+    }
+  ]
+}

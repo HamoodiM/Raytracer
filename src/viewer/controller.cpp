@@ -5,7 +5,8 @@ namespace viewer {
 
 Controller::Controller(GLFWwindow* window) 
     : window_(window), last_mouse_x_(0), last_mouse_y_(0), 
-      mouse_dx_(0), mouse_dy_(0), first_mouse_(true) {
+      mouse_dx_(0), mouse_dy_(0), first_mouse_(true),
+      movement_speed_(5.0f), mouse_sensitivity_(0.002f) {
     
     glfwSetWindowUserPointer(window_, this);
     glfwSetCursorPosCallback(window_, mouse_callback);
