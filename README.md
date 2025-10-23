@@ -52,10 +52,11 @@ cmake --build . --config Release
 
 ```bash
 # Run the raytracer
-./bin/raytracer
+./bin/raytracer 1
 
 # The program will render a scene and save the result as output.ppm
 ```
+test scenes range between 1 and 4
 
 ## Project Structure
 
