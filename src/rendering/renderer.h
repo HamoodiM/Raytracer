@@ -4,6 +4,7 @@
 #include "integrator.h"
 #include "../core/camera.h"
 #include "../core/scene.h"
+#include <cstdint>
 
 namespace raytracer {
 namespace rendering {
@@ -17,12 +18,15 @@ public:
     
     void set_samples_per_pixel(int samples) { samples_per_pixel_ = samples; }
     void set_max_depth(int depth) { max_depth_ = depth; }
+    void set_seed(uint64_t seed) { seed_ = seed; }
+    Integrator& integrator() { return integrator_; }
 
 private:
     Framebuffer framebuffer_;
     Integrator integrator_;
     int samples_per_pixel_;
     int max_depth_;
+    uint64_t seed_ = 0;
 };
 
 } // namespace rendering

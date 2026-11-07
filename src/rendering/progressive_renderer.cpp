@@ -37,12 +37,21 @@ void ProgressiveRenderer::reset() {
 }
 
 void ProgressiveRenderer::render_single_sample(const core::Camera& camera, const core::Scene& scene) {
-    // Render one sample per pixel
-    for (int y = 0; y < framebuffer_.height(); ++y) {
-        for (int x = 0; x < framebuffer_.width(); ++x) {
+    // Render one sample per pixel. Rows run in parallel when OpenMP is
+    // available; each pixel reseeds the thread-local RNG from (x, y, pass).
+    const int width = framebuffer_.width();
+    const int height = framebuffer_.height();
+    const uint32_t pass = static_cast<uint32_t>(sample_count_);
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(dynamic, 1)
+#endif
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            core::seed_rng_for_pixel(x, y, pass);
+
             // Generate random UV coordinates for this sample
-            auto u = (x + core::random_float()) / (framebuffer_.width() - 1);
-            auto v = (y + core::random_float()) / (framebuffer_.height() - 1);
+            auto u = (x + core::random_float()) / (width - 1);
+            auto v = (y + core::random_float()) / (height - 1);
             
             // Cast ray and trace
             core::Ray ray = camera.get_ray(u, v);

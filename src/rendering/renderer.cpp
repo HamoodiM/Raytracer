@@ -3,6 +3,8 @@
 #include "../core/utils.h"
 #include <iostream>
 #include <chrono>
+#include <algorithm>
+#include <atomic>
 
 namespace raytracer {
 namespace rendering {
@@ -18,14 +20,27 @@ void Renderer::render(const core::Camera& camera, const core::Scene& scene) {
               << " with " << samples_per_pixel_ << " samples per pixel..." << std::endl;
     
     framebuffer_.clear();
-    
-    for (int y = 0; y < framebuffer_.height(); ++y) {
-        for (int x = 0; x < framebuffer_.width(); ++x) {
+
+    const int width = framebuffer_.width();
+    const int height = framebuffer_.height();
+    std::atomic<int> rows_done(0);
+    const int report_every = std::max(1, height / 10);
+
+    // Rows are independent: each pixel only writes its own framebuffer
+    // entry, and the RNG is thread_local and reseeded per pixel, so the
+    // image does not depend on how rows are spread over threads.
+    // schedule(dynamic): rows through glass/metal cost more than sky rows.
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(dynamic, 1)
+#endif
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            core::seed_rng_for_pixel(x, y, 0, seed_);
             Color pixel_color(0, 0, 0);
             
             for (int s = 0; s < samples_per_pixel_; ++s) {
-                auto u = (x + core::random_float()) / (framebuffer_.width() - 1);
-                auto v = (y + core::random_float()) / (framebuffer_.height() - 1);
+                auto u = (x + core::random_float()) / (width - 1);
+                auto v = (y + core::random_float()) / (height - 1);
                 
                 core::Ray ray = camera.get_ray(u, v);
                 pixel_color += integrator_.trace(ray, scene, max_depth_);
@@ -36,8 +51,12 @@ void Renderer::render(const core::Camera& camera, const core::Scene& scene) {
         }
         
         // Progress indicator
-        if (y % (framebuffer_.height() / 10) == 0) {
-            std::cout << "Progress: " << (y * 100 / framebuffer_.height()) << "%" << std::endl;
+        int done = ++rows_done;
+        if (done % report_every == 0) {
+#if defined(_OPENMP)
+#pragma omp critical(progress_output)
+#endif
+            std::cout << "Progress: " << (done * 100 / height) << "%" << std::endl;
         }
     }
     
