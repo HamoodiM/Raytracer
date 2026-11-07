@@ -233,7 +233,7 @@ matte shading.
 emitter is both scene geometry *and* a sampled `Light`, the light reaching that diffuse point is
 counted once by (a) and again by (b). Expected brightness from that light doubles.
 
-**Does it show up?** Not in the shipped JSON scenes. Area lights there have no geometry (bounce rays
+**Does it show up?** Not in the original JSON scenes. Area lights there have no geometry (bounce rays
 cannot hit them), and no emissive object is also registered as a light, so no emitter is counted by
 both paths. It does apply to `SceneBuilder::create_cornell_box()` (an emissive sphere plus an area
 light at the same spot), which nothing currently calls, and to any scene that gives a light visible

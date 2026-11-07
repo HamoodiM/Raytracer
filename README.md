@@ -31,7 +31,7 @@ What is implemented, and where:
   traversed iteratively, near child first. Infinite planes are tested outside the BVH.
 - **Camera**: vertical field of view, thin-lens depth of field (aperture, focus distance).
 - **Textures**: checker, image (stb_image), normal map.
-- **Parallelism**: `#pragma omp parallel for schedule(dynamic)` over image rows when built with
+- **Parallelism**: `#pragma omp parallel for schedule(dynamic, 1)` over image rows when built with
   OpenMP, with a `thread_local` PCG32 generator reseeded per pixel, so images do not depend on the
   thread count. Without OpenMP the same code runs single-threaded.
 - **Output**: PNG (built-in writer, no zlib) or binary PPM, gamma 2.2 and clamping (no tone
