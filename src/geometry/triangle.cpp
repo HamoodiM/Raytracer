@@ -41,9 +41,24 @@ bool Triangle::hit(const core::Ray& ray, float t_min, float t_max, HitRecord& re
     rec.t = t;
     rec.point = ray.at(rec.t);
     
-    // Compute normal using cross product
+    // Geometric normal from the winding order; decides front/back face
     Vec3 outward_normal = glm::normalize(glm::cross(edge1, edge2));
     rec.set_face_normal(ray, outward_normal);
+
+    if (smooth_) {
+        // Moller-Trumbore's (u, v) are the barycentric weights of v1 and v2:
+        // P = (1 - u - v) * v0 + u * v1 + v * v2. Interpolate the vertex
+        // normals the same way.
+        Vec3 n = (1.0f - u - v) * n0_ + u * n1_ + v * n2_;
+        float len = glm::length(n);
+        if (len > 1e-12f) {
+            n /= len;
+            // Vertex normals from a file may be wound the other way round:
+            // orient them like the face normal, then face the incoming ray.
+            if (glm::dot(n, outward_normal) < 0.0f) n = -n;
+            rec.normal = rec.front_face ? n : -n;
+        }
+    }
     rec.material = material_;
     
     // Compute UV coordinates using barycentric coordinates

@@ -12,7 +12,10 @@ bool Metal::scatter(const core::Ray& ray_in, const geometry::HitRecord& rec,
     Vec3 reflected = core::reflect(glm::normalize(ray_in.direction()), rec.normal);
     scattered = core::Ray(rec.point, reflected + fuzz_ * core::random_in_unit_sphere());
     attenuation = albedo_;
-    return (glm::dot(scattered.direction(), rec.normal) > 0);
+    // Absorb rays that end up below the shading normal or below the real
+    // surface (possible with interpolated normals).
+    return glm::dot(scattered.direction(), rec.normal) > 0 &&
+           glm::dot(scattered.direction(), rec.geometric_normal) > 0;
 }
 
 } // namespace materials

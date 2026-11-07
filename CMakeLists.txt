@@ -80,6 +80,7 @@ set(GEOMETRY_SOURCES
     src/geometry/plane.cpp
     src/geometry/triangle.cpp
     src/geometry/mesh.cpp
+    src/geometry/mesh_normals.cpp
 )
 
 set(MATERIAL_SOURCES
@@ -132,6 +133,7 @@ set(HEADERS
     src/geometry/plane.h
     src/geometry/triangle.h
     src/geometry/mesh.h
+    src/geometry/mesh_normals.h
     src/materials/material.h
     src/materials/lambertian.h
     src/materials/textured_lambertian.h
@@ -188,12 +190,17 @@ add_executable(bvh_test tests/bvh_test.cpp)
 target_link_libraries(bvh_test raytracer_core)
 add_test(NAME bvh_matches_brute_force COMMAND bvh_test)
 
+# Smooth shading: vertex normals, interpolation, OBJ "smooth" flag
+add_executable(smooth_normals_test tests/smooth_normals_test.cpp)
+target_link_libraries(smooth_normals_test raytracer_core)
+add_test(NAME smooth_normals COMMAND smooth_normals_test)
+
 # Brute force vs BVH ray-casting benchmark (not a test; prints a table)
 add_executable(bvh_bench tests/bvh_bench.cpp)
 target_link_libraries(bvh_bench raytracer_core)
 
 # Set output directory
-set_target_properties(raytracer_cli bvh_test bvh_bench PROPERTIES
+set_target_properties(raytracer_cli bvh_test bvh_bench smooth_normals_test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 if(RAYTRACER_BUILD_VIEWER)

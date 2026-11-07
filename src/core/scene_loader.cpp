@@ -7,6 +7,7 @@
 #include "../geometry/sphere.h"
 #include "../geometry/plane.h"
 #include "../geometry/triangle.h"
+#include "../geometry/mesh_normals.h"
 #include "../materials/lambertian.h"
 #include "../materials/textured_lambertian.h"
 #include "../materials/metal.h"
@@ -17,6 +18,7 @@
 #include "../textures/normal_map.h"
 #include "../common.h"
 #include <cstdio>
+#include <array>
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -227,54 +229,106 @@ std::shared_ptr<Light> SceneLoader::create_light(const nlohmann::json& light_jso
 }
 
 void SceneLoader::load_obj(const nlohmann::json& object_json, Scene& scene) {
-    // Minimal Wavefront OBJ reader: only "v x y z" and "f a b c ..." lines.
-    // Polygons are fan-triangulated; "a/b/c" index forms and negative
-    // (relative) indices are accepted; normals, UVs, groups and materials
-    // are ignored, so meshes are flat shaded.
+    // Minimal Wavefront OBJ reader: "v", "vn" and "f" lines. Polygons are
+    // fan-triangulated; face corners may be "v", "v/vt", "v//vn" or
+    // "v/vt/vn", and negative (relative) indices are accepted. UVs, groups
+    // and materials are ignored.
+    //
+    // "smooth": true gives each triangle per-vertex normals: the file's "vn"
+    // normals if every face corner has one, otherwise area-weighted averages
+    // of the faces around each vertex. Default false (flat shading).
     const std::string filename = object_json["file"];
     const float scale = object_json.value("scale", 1.0f);
     const Vec3 translate =
         object_json.contains("translate") ? parse_vec3(object_json["translate"]) : Vec3(0.0f);
+    const bool smooth = object_json.value("smooth", false);
     auto material = create_material(object_json["material"]);
 
     std::FILE* file = std::fopen(filename.c_str(), "rb");
     if (!file) throw std::runtime_error("Failed to open OBJ file: " + filename);
 
     std::vector<Point3> vertices;
-    size_t triangles = 0;
+    std::vector<Vec3> file_normals;
+    std::vector<std::array<int, 3>> faces;          // vertex indices per triangle
+    std::vector<std::array<int, 3>> face_normals;   // "vn" indices per triangle (-1 = none)
+    bool every_corner_has_vn = true;
+
+    auto resolve = [](int i, size_t count) {  // 1-based or negative OBJ index -> 0-based
+        return i < 0 ? static_cast<int>(count) + i : i - 1;
+    };
+
     char line[1024];
     while (std::fgets(line, sizeof(line), file)) {
         if (line[0] == 'v' && line[1] == ' ') {
             float x, y, z;
             if (std::sscanf(line + 2, "%f %f %f", &x, &y, &z) == 3)
                 vertices.push_back(Point3(x, y, z) * scale + translate);
+        } else if (line[0] == 'v' && line[1] == 'n' && line[2] == ' ') {
+            float x, y, z;
+            if (std::sscanf(line + 3, "%f %f %f", &x, &y, &z) == 3)
+                file_normals.push_back(Vec3(x, y, z));  // uniform scale: direction unchanged
         } else if (line[0] == 'f' && line[1] == ' ') {
-            std::vector<int> idx;
+            std::vector<int> vi, ni;
             const char* p = line + 2;
             const char* separators = " \t\r\n";
             while (*p) {
                 p += std::strspn(p, separators);
                 if (*p == '\0') break;
-                int i = std::atoi(p);
-                idx.push_back(i < 0 ? static_cast<int>(vertices.size()) + i : i - 1);
-                p += std::strcspn(p, separators);  // skip the rest, e.g. "/vt/vn"
-            }
-            const int n = static_cast<int>(vertices.size());
-            for (size_t k = 1; k + 1 < idx.size(); ++k) {
-                int a = idx[0], b = idx[k], c = idx[k + 1];
-                if (a < 0 || b < 0 || c < 0 || a >= n || b >= n || c >= n) {
-                    std::fclose(file);
-                    throw std::runtime_error("Bad face index in " + filename);
+                size_t token_len = std::strcspn(p, separators);
+                std::string token(p, token_len);
+                p += token_len;
+
+                int v = 0, t = 0, n = 0;
+                if (std::sscanf(token.c_str(), "%d/%d/%d", &v, &t, &n) == 3 ||
+                    std::sscanf(token.c_str(), "%d//%d", &v, &n) == 2) {
+                    ni.push_back(resolve(n, file_normals.size()));
+                } else {
+                    v = std::atoi(token.c_str());  // "v" or "v/vt"
+                    ni.push_back(-1);
+                    every_corner_has_vn = false;
                 }
-                scene.add(std::make_shared<geometry::Triangle>(vertices[a], vertices[b], vertices[c],
-                                                              material));
-                ++triangles;
+                vi.push_back(resolve(v, vertices.size()));
+            }
+            const int nv = static_cast<int>(vertices.size());
+            const int nn = static_cast<int>(file_normals.size());
+            for (size_t k = 1; k + 1 < vi.size(); ++k) {
+                std::array<int, 3> f = {vi[0], vi[k], vi[k + 1]};
+                std::array<int, 3> fn = {ni[0], ni[k], ni[k + 1]};
+                for (int c = 0; c < 3; ++c) {
+                    if (f[c] < 0 || f[c] >= nv || fn[c] >= nn) {
+                        std::fclose(file);
+                        throw std::runtime_error("Bad face index in " + filename);
+                    }
+                }
+                faces.push_back(f);
+                face_normals.push_back(fn);
             }
         }
     }
     std::fclose(file);
+
+    const bool use_file_normals = smooth && every_corner_has_vn && !file_normals.empty();
+    std::vector<Vec3> vertex_normals;
+    if (smooth && !use_file_normals) vertex_normals = geometry::compute_vertex_normals(vertices, faces);
+
+    for (size_t i = 0; i < faces.size(); ++i) {
+        const auto& f = faces[i];
+        if (!smooth) {
+            scene.add(std::make_shared<geometry::Triangle>(vertices[f[0]], vertices[f[1]], vertices[f[2]],
+                                                          material));
+            continue;
+        }
+        Vec3 n[3];
+        for (int c = 0; c < 3; ++c)
+            n[c] = use_file_normals ? glm::normalize(file_normals[face_normals[i][c]]) : vertex_normals[f[c]];
+        scene.add(std::make_shared<geometry::Triangle>(vertices[f[0]], vertices[f[1]], vertices[f[2]],
+                                                      n[0], n[1], n[2], material));
+    }
+
     std::cout << "Loaded mesh: " << filename << " (" << vertices.size() << " vertices, "
-              << triangles << " triangles)" << std::endl;
+              << faces.size() << " triangles, "
+              << (!smooth ? "flat" : use_file_normals ? "smooth, file normals" : "smooth, computed normals")
+              << ")" << std::endl;
 }
 
 Vec3 SceneLoader::parse_vec3(const nlohmann::json& json_array) {

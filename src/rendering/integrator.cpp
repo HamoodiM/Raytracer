@@ -26,7 +26,7 @@ Color Integrator::direct_lighting(const geometry::HitRecord& rec, const Color& a
 
         float cos_theta = glm::dot(shading_normal, sample.direction);
         // Skip lights behind the shading normal or behind the actual surface
-        if (cos_theta <= 0.0f || glm::dot(rec.normal, sample.direction) <= 0.0f) continue;
+        if (cos_theta <= 0.0f || glm::dot(rec.geometric_normal, sample.direction) <= 0.0f) continue;
 
         // Shadow ray
         core::Ray shadow_ray(rec.point, sample.direction);

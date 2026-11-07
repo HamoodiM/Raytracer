@@ -11,7 +11,13 @@ namespace geometry {
 
 struct HitRecord {
     Point3 point;
+    // Shading normal (faces the incoming ray). Equal to geometric_normal
+    // except on smooth-shaded triangles, where it is interpolated from the
+    // vertex normals.
     Vec3 normal;
+    // True surface normal (faces the incoming ray). Use it for front/back
+    // decisions and for "is this direction above the surface" tests.
+    Vec3 geometric_normal;
     std::shared_ptr<materials::Material> material;
     float t;
     bool front_face;
@@ -26,6 +32,7 @@ struct HitRecord {
     inline void set_face_normal(const core::Ray& ray, const Vec3& outward_normal) {
         front_face = glm::dot(ray.direction(), outward_normal) < 0;
         normal = front_face ? outward_normal : -outward_normal;
+        geometric_normal = normal;
     }
     
     /**
