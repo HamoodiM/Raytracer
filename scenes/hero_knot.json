@@ -1,0 +1,188 @@
+{
+  "camera": {
+    "position": [
+      0.6,
+      1.7,
+      5.2
+    ],
+    "look_at": [
+      0,
+      0.9,
+      0
+    ],
+    "vup": [
+      0,
+      1,
+      0
+    ],
+    "vfov": 34,
+    "aspect_ratio": 1.7778,
+    "aperture": 0.18,
+    "focus_distance": 5.281
+  },
+  "background": {
+    "top": [
+      0.3,
+      0.36,
+      0.5
+    ],
+    "bottom": [
+      0.05,
+      0.04,
+      0.05
+    ]
+  },
+  "objects": [
+    {
+      "type": "plane",
+      "point": [
+        0,
+        0,
+        0
+      ],
+      "normal": [
+        0,
+        1,
+        0
+      ],
+      "material": {
+        "type": "textured_lambertian",
+        "albedo_texture": {
+          "type": "checker",
+          "color1": [
+            0.55,
+            0.55,
+            0.55
+          ],
+          "color2": [
+            0.25,
+            0.25,
+            0.27
+          ],
+          "frequency": 20
+        }
+      }
+    },
+    {
+      "type": "obj",
+      "file": "assets/models/torus_knot.obj",
+      "scale": 1.0,
+      "translate": [
+        0,
+        1.0,
+        0
+      ],
+      "material": {
+        "type": "metal",
+        "albedo": [
+          1.0,
+          0.76,
+          0.33
+        ],
+        "fuzz": 0.12
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [
+        -2.3,
+        0.55,
+        -1.8
+      ],
+      "radius": 0.55,
+      "material": {
+        "type": "dielectric",
+        "ir": 1.5
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [
+        2.1,
+        0.5,
+        -2.6
+      ],
+      "radius": 0.5,
+      "material": {
+        "type": "textured_lambertian",
+        "albedo_texture": "assets/textures/bricks_albedo.png",
+        "normal_map": "assets/textures/bricks_normal.png",
+        "normal_strength": 1.0
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [
+        -1.4,
+        0.3,
+        1.9
+      ],
+      "radius": 0.3,
+      "material": {
+        "type": "lambertian",
+        "albedo": [
+          0.15,
+          0.35,
+          0.8
+        ]
+      }
+    },
+    {
+      "type": "sphere",
+      "center": [
+        1.6,
+        0.35,
+        1.4
+      ],
+      "radius": 0.35,
+      "material": {
+        "type": "metal",
+        "albedo": [
+          0.9,
+          0.9,
+          0.92
+        ],
+        "fuzz": 0.0
+      }
+    }
+  ],
+  "lights": [
+    {
+      "type": "area",
+      "center": [
+        -2.0,
+        4.0,
+        2.0
+      ],
+      "u": [
+        2.0,
+        0,
+        0
+      ],
+      "v": [
+        0,
+        0,
+        2.0
+      ],
+      "emission": [
+        10,
+        9.4,
+        8.6
+      ],
+      "visible": false
+    },
+    {
+      "type": "point",
+      "position": [
+        3,
+        2.5,
+        -3
+      ],
+      "intensity": [
+        6,
+        7,
+        10
+      ]
+    }
+  ]
+}

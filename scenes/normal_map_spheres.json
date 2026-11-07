@@ -1,0 +1,29 @@
+{
+  "camera": {
+    "position": [0, 0.9, 4.6],
+    "look_at": [0, 0.7, 0],
+    "vup": [0, 1, 0],
+    "vfov": 40,
+    "aspect_ratio": 1.7778,
+    "aperture": 0.0,
+    "focus_distance": 4.6
+  },
+  "objects": [
+    { "type": "plane", "point": [0, 0, 0], "normal": [0, 1, 0],
+      "material": { "type": "lambertian", "albedo": [0.5, 0.5, 0.5] } },
+    { "type": "sphere", "center": [-1.8, 0.8, 0], "radius": 0.8,
+      "material": { "type": "textured_lambertian",
+        "albedo_texture": { "type": "checker", "color1": [0.75, 0.75, 0.75], "color2": [0.75, 0.75, 0.75] } } },
+    { "type": "sphere", "center": [0, 0.8, 0], "radius": 0.8,
+      "material": { "type": "textured_lambertian",
+        "albedo_texture": { "type": "checker", "color1": [0.75, 0.75, 0.75], "color2": [0.75, 0.75, 0.75] },
+        "normal_map": "assets/textures/bricks_normal.png", "normal_strength": 1.0 } },
+    { "type": "sphere", "center": [1.8, 0.8, 0], "radius": 0.8,
+      "material": { "type": "textured_lambertian",
+        "albedo_texture": "assets/textures/bricks_albedo.png",
+        "normal_map": "assets/textures/bricks_normal.png", "normal_strength": 1.0 } }
+  ],
+  "lights": [
+    { "type": "point", "position": [-4, 4, 3], "intensity": [25, 25, 25] }
+  ]
+}
