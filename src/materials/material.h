@@ -18,6 +18,15 @@ public:
     virtual Color emit() const { return Color(0, 0, 0); }
 
     /**
+     * @brief True if this emitter is also registered as a scene light
+     *
+     * Such emitters are already counted by next-event estimation at the
+     * previous diffuse vertex, so the integrator must not add their emission
+     * again when a diffuse bounce ray happens to hit them.
+     */
+    virtual bool emission_sampled_by_lights() const { return false; }
+
+    /**
      * @brief BRDF data for next-event estimation (direct light sampling)
      *
      * Diffuse materials return true and fill in their albedo and shading

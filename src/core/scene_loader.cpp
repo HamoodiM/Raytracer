@@ -53,6 +53,21 @@ Scene SceneLoader::load_scene(const std::string& filename) {
         for (const auto& light_json : scene_json["lights"]) {
             auto light = create_light(light_json);
             scene.add_light(light);
+
+            // "visible": true gives an area light real geometry (two emissive
+            // triangles), so it shows up in the camera, mirrors and glass.
+            // That geometry is flagged as light-sampled so the integrator does
+            // not count it a second time after next-event estimation.
+            if (light_json.value("type", std::string()) == "area" && light_json.value("visible", false)) {
+                Point3 c = parse_vec3(light_json["center"]);
+                Vec3 u = parse_vec3(light_json["u"]) * 0.5f;
+                Vec3 v = parse_vec3(light_json["v"]) * 0.5f;
+                auto emitter = std::make_shared<materials::Emissive>(
+                    parse_color(light_json["emission"]), /*sampled_by_lights=*/true);
+                Point3 p00 = c - u - v, p10 = c + u - v, p11 = c + u + v, p01 = c - u + v;
+                scene.add(std::make_shared<geometry::Triangle>(p00, p10, p11, emitter));
+                scene.add(std::make_shared<geometry::Triangle>(p00, p11, p01, emitter));
+            }
         }
     }
     

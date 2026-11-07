@@ -9,10 +9,6 @@
 namespace raytracer {
 namespace rendering {
 
-Color Integrator::trace(const core::Ray& ray, const core::Scene& scene, int depth) const {
-    return ray_color(ray, scene, depth);
-}
-
 Color Integrator::direct_lighting(const geometry::HitRecord& rec, const Color& albedo,
                                   const Vec3& shading_normal, const core::Scene& scene) const {
     // Next-event estimation for a Lambertian surface. For each light, one
@@ -43,35 +39,54 @@ Color Integrator::direct_lighting(const geometry::HitRecord& rec, const Color& a
     return direct;
 }
 
-Color Integrator::ray_color(const core::Ray& ray, const core::Scene& scene, int depth) const {
-    if (depth <= 0)
-        return Color(0, 0, 0);
-    
-    geometry::HitRecord rec;
-    if (scene.hit(ray, 0.001f, std::numeric_limits<float>::infinity(), rec)) {
+Color Integrator::trace(const core::Ray& camera_ray, const core::Scene& scene, int max_depth) const {
+    Color radiance(0.0f);
+    Color throughput(1.0f);    // product of BRDF * cos / pdf along the path
+    core::Ray ray = camera_ray;
+
+    // Emission found by a bounce ray is only added when the previous vertex
+    // did NOT already sample the lights (camera ray, mirror, glass, fuzzy
+    // metal). After a diffuse vertex, light-sampled emitters were counted by
+    // next-event estimation, and adding them again would count them twice.
+    bool count_light_emission = true;
+
+    for (int depth = 0; depth < max_depth; ++depth) {
+        geometry::HitRecord rec;
+        if (!scene.hit(ray, 0.001f, std::numeric_limits<float>::infinity(), rec)) {
+            // The sky is never sampled by NEE, so it is always counted.
+            radiance += throughput * background(ray);
+            break;
+        }
+
+        const materials::Material& material = *rec.material;
+        if (count_light_emission || !material.emission_sampled_by_lights())
+            radiance += throughput * material.emit();
+
         core::Ray scattered;
         Color attenuation;
-        Color emitted = rec.material->emit();
-        
-        // If material doesn't scatter (emissive), return emission only
-        if (!rec.material->scatter(ray, rec, attenuation, scattered))
-            return emitted;
-        
-        // Direct lighting (next-event estimation), only for diffuse surfaces.
-        // The BRDF (albedo / pi) is applied inside direct_lighting.
-        Color direct(0.0f);
+        if (!material.scatter(ray, rec, attenuation, scattered))
+            break;  // pure emitter, or absorbed (e.g. metal ray below the surface)
+
         Color albedo;
         Vec3 shading_normal;
-        if (rec.material->diffuse_brdf(rec, albedo, shading_normal))
-            direct = direct_lighting(rec, albedo, shading_normal, scene);
-        
-        // Indirect lighting (recursive path tracing)
-        Color indirect = attenuation * ray_color(scattered, scene, depth - 1);
-        
-        return emitted + direct + indirect;
+        if (material.diffuse_brdf(rec, albedo, shading_normal)) {
+            radiance += throughput * direct_lighting(rec, albedo, shading_normal, scene);
+            count_light_emission = false;
+        } else {
+            count_light_emission = true;
+        }
+
+        // Lambertian: cosine-weighted sampling makes BRDF*cos/pdf = albedo.
+        // Metal/glass: attenuation is the specular weight.
+        throughput *= attenuation;
+        ray = scattered;
     }
-    
-    // Background (sky) for debugging
+
+    return radiance;
+}
+
+Color Integrator::background(const core::Ray& ray) const {
+    // Simple sky gradient
     Vec3 unit_direction = glm::normalize(ray.direction());
     auto t = 0.5f * (unit_direction.y + 1.0f);
     return (1.0f - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0);
