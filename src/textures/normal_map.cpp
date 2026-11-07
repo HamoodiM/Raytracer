@@ -41,15 +41,12 @@ Color NormalMap::sample(float u, float v) const {
 
 Vec3 NormalMap::transform_to_world_space(const Vec3& tangent_space_normal, 
                                         const geometry::HitRecord& rec) const {
-    // Construct TBN matrix: [T, B, N] where T=Tangent, B=Bitangent, N=Normal
-    // The transformation is: world_normal = TBN * tangent_normal
-    
-    // Create TBN matrix (transpose for proper transformation)
-    glm::mat3 tbn_matrix(
-        rec.tangent.x, rec.bitangent.x, rec.normal.x,
-        rec.tangent.y, rec.bitangent.y, rec.normal.y,
-        rec.tangent.z, rec.bitangent.z, rec.normal.z
-    );
+    // TBN matrix whose COLUMNS are T, B and N.
+    // GLM matrices are column-major: glm::mat3(c0, c1, c2) takes three column
+    // vectors, so this maps tangent-space (x, y, z) to x*T + y*B + z*N.
+    // (The previous version passed the components row by row, which in GLM
+    // builds the transpose, i.e. the world->tangent matrix.)
+    glm::mat3 tbn_matrix(rec.tangent, rec.bitangent, rec.normal);
     
     // Transform the normal from tangent space to world space
     Vec3 world_normal = tbn_matrix * tangent_space_normal;
