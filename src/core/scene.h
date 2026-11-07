@@ -35,6 +35,21 @@ public:
     bool hit_brute_force(const Ray& ray, float t_min, float t_max, geometry::HitRecord& rec) const;
 
     const std::vector<std::shared_ptr<Light>>& lights() const { return lights_; }
+
+    /**
+     * @brief Background radiance for rays that leave the scene
+     *
+     * Vertical gradient from 'bottom' (looking down) to 'top' (looking up).
+     * Default is the original white-to-sky-blue gradient.
+     */
+    void set_background(const Color& top, const Color& bottom) {
+        background_top_ = top;
+        background_bottom_ = bottom;
+    }
+    Color background(const Vec3& direction) const {
+        float t = 0.5f * (glm::normalize(direction).y + 1.0f);
+        return (1.0f - t) * background_bottom_ + t * background_top_;
+    }
     size_t object_count() const { return objects_.size(); }
     const acceleration::BVH& bvh() const { return bvh_; }
 
@@ -45,6 +60,8 @@ private:
     acceleration::BVH bvh_;
     bool bvh_ready_ = false;
     bool use_bvh_ = true;
+    Color background_top_ = Color(0.5f, 0.7f, 1.0f);
+    Color background_bottom_ = Color(1.0f, 1.0f, 1.0f);
 };
 
 } // namespace core

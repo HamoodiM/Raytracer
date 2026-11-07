@@ -17,6 +17,9 @@
 #include "../textures/normal_map.h"
 #include "../common.h"
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
 #include <iostream>
 #include <stdexcept>
 
@@ -51,9 +54,24 @@ Scene SceneLoader::load_scene(const std::string& filename) {
 Scene SceneLoader::load_scene(const nlohmann::json& scene_json) {
     Scene scene;
     
+    // Optional background: a colour, or {"top": [...], "bottom": [...]}
+    if (scene_json.contains("background")) {
+        const auto& bg = scene_json["background"];
+        if (bg.is_array()) {
+            Color c = parse_color(bg);
+            scene.set_background(c, c);
+        } else {
+            scene.set_background(parse_color(bg["top"]), parse_color(bg["bottom"]));
+        }
+    }
+
     // Load objects
     if (scene_json.contains("objects")) {
         for (const auto& object_json : scene_json["objects"]) {
+            if (object_json.value("type", std::string()) == "obj") {
+                load_obj(object_json, scene);  // adds one Triangle per face
+                continue;
+            }
             auto primitive = create_primitive(object_json);
             scene.add(primitive);
         }
@@ -206,6 +224,57 @@ std::shared_ptr<Light> SceneLoader::create_light(const nlohmann::json& light_jso
     else {
         throw std::runtime_error("Unknown light type: " + type);
     }
+}
+
+void SceneLoader::load_obj(const nlohmann::json& object_json, Scene& scene) {
+    // Minimal Wavefront OBJ reader: only "v x y z" and "f a b c ..." lines.
+    // Polygons are fan-triangulated; "a/b/c" index forms and negative
+    // (relative) indices are accepted; normals, UVs, groups and materials
+    // are ignored, so meshes are flat shaded.
+    const std::string filename = object_json["file"];
+    const float scale = object_json.value("scale", 1.0f);
+    const Vec3 translate =
+        object_json.contains("translate") ? parse_vec3(object_json["translate"]) : Vec3(0.0f);
+    auto material = create_material(object_json["material"]);
+
+    std::FILE* file = std::fopen(filename.c_str(), "rb");
+    if (!file) throw std::runtime_error("Failed to open OBJ file: " + filename);
+
+    std::vector<Point3> vertices;
+    size_t triangles = 0;
+    char line[1024];
+    while (std::fgets(line, sizeof(line), file)) {
+        if (line[0] == 'v' && line[1] == ' ') {
+            float x, y, z;
+            if (std::sscanf(line + 2, "%f %f %f", &x, &y, &z) == 3)
+                vertices.push_back(Point3(x, y, z) * scale + translate);
+        } else if (line[0] == 'f' && line[1] == ' ') {
+            std::vector<int> idx;
+            const char* p = line + 2;
+            const char* separators = " \t\r\n";
+            while (*p) {
+                p += std::strspn(p, separators);
+                if (*p == '\0') break;
+                int i = std::atoi(p);
+                idx.push_back(i < 0 ? static_cast<int>(vertices.size()) + i : i - 1);
+                p += std::strcspn(p, separators);  // skip the rest, e.g. "/vt/vn"
+            }
+            const int n = static_cast<int>(vertices.size());
+            for (size_t k = 1; k + 1 < idx.size(); ++k) {
+                int a = idx[0], b = idx[k], c = idx[k + 1];
+                if (a < 0 || b < 0 || c < 0 || a >= n || b >= n || c >= n) {
+                    std::fclose(file);
+                    throw std::runtime_error("Bad face index in " + filename);
+                }
+                scene.add(std::make_shared<geometry::Triangle>(vertices[a], vertices[b], vertices[c],
+                                                              material));
+                ++triangles;
+            }
+        }
+    }
+    std::fclose(file);
+    std::cout << "Loaded mesh: " << filename << " (" << vertices.size() << " vertices, "
+              << triangles << " triangles)" << std::endl;
 }
 
 Vec3 SceneLoader::parse_vec3(const nlohmann::json& json_array) {

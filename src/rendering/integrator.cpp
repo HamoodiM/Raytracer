@@ -54,7 +54,7 @@ Color Integrator::trace(const core::Ray& camera_ray, const core::Scene& scene, i
         geometry::HitRecord rec;
         if (!scene.hit(ray, 0.001f, std::numeric_limits<float>::infinity(), rec)) {
             // The sky is never sampled by NEE, so it is always counted.
-            radiance += throughput * background(ray);
+            radiance += throughput * scene.background(ray.direction());
             break;
         }
 
@@ -95,13 +95,6 @@ Color Integrator::trace(const core::Ray& camera_ray, const core::Scene& scene, i
     }
 
     return radiance;
-}
-
-Color Integrator::background(const core::Ray& ray) const {
-    // Simple sky gradient
-    Vec3 unit_direction = glm::normalize(ray.direction());
-    auto t = 0.5f * (unit_direction.y + 1.0f);
-    return (1.0f - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0);
 }
 
 } // namespace rendering

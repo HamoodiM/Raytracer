@@ -33,7 +33,6 @@ public:
 private:
     int rr_start_ = 3;
 
-    Color background(const core::Ray& ray) const;
     Color direct_lighting(const geometry::HitRecord& rec, const Color& albedo,
                           const Vec3& shading_normal, const core::Scene& scene) const;
 };

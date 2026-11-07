@@ -85,6 +85,14 @@ private:
      * @return Created light object
      */
     static std::shared_ptr<Light> create_light(const nlohmann::json& light_json);
+
+    /**
+     * @brief Loads a Wavefront OBJ file as individual triangles
+     *
+     * JSON: {"type": "obj", "file": "...", "scale": 1, "translate": [x,y,z],
+     *        "material": {...}}
+     */
+    static void load_obj(const nlohmann::json& object_json, Scene& scene);
     
     /**
      * @brief Parses a 3D vector from JSON array
