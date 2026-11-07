@@ -3,6 +3,7 @@
 #include "../common.h"
 #include "../core/ray.h"
 #include "../materials/material.h"
+#include "../acceleration/aabb.h"
 #include <memory>
 
 namespace raytracer {
@@ -43,6 +44,17 @@ class Primitive {
 public:
     virtual ~Primitive() = default;
     virtual bool hit(const core::Ray& ray, float t_min, float t_max, HitRecord& rec) const = 0;
+
+    /**
+     * @brief World-space bounding box, used to build the BVH
+     *
+     * @return false for unbounded primitives (e.g. infinite planes), which
+     *         the scene then tests separately, outside the BVH
+     */
+    virtual bool bounding_box(acceleration::AABB& box) const {
+        (void)box;
+        return false;
+    }
 };
 
 } // namespace geometry

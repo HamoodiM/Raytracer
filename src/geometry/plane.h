@@ -14,6 +14,7 @@ public:
         : point_(point), normal_(normal), material_(material) {}
 
     bool hit(const core::Ray& ray, float t_min, float t_max, HitRecord& rec) const override;
+    // Infinite plane: no bounding box (inherits bounding_box() -> false)
 
 private:
     Point3 point_;

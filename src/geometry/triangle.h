@@ -15,6 +15,7 @@ public:
         : v0_(v0), v1_(v1), v2_(v2), material_(material) {}
 
     bool hit(const core::Ray& ray, float t_min, float t_max, HitRecord& rec) const override;
+    bool bounding_box(acceleration::AABB& box) const override;
 
 private:
     Point3 v0_, v1_, v2_;

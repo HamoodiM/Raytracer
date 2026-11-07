@@ -14,6 +14,7 @@ public:
         : center_(center), radius_(radius), material_(material) {}
 
     bool hit(const core::Ray& ray, float t_min, float t_max, HitRecord& rec) const override;
+    bool bounding_box(acceleration::AABB& box) const override;
 
 private:
     Point3 center_;

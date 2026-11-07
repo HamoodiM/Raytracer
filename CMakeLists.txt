@@ -161,6 +161,19 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(raytracer OpenMP::OpenMP_CXX)
 endif()
 
+# BVH correctness test: BVH closest hits must equal brute-force closest hits
+enable_testing()
+add_executable(bvh_test
+    tests/bvh_test.cpp
+    ${CORE_SOURCES}
+    ${GEOMETRY_SOURCES}
+    ${MATERIAL_SOURCES}
+    ${TEXTURE_SOURCES}
+    ${ACCELERATION_SOURCES}
+)
+target_link_libraries(bvh_test glm::glm)
+add_test(NAME bvh_matches_brute_force COMMAND bvh_test)
+
 # Set output directory
 set_target_properties(raytracer PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin

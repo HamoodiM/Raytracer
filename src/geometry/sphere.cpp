@@ -39,6 +39,12 @@ bool Sphere::hit(const core::Ray& ray, float t_min, float t_max, HitRecord& rec)
     return true;
 }
 
+bool Sphere::bounding_box(acceleration::AABB& box) const {
+    Vec3 r(std::abs(radius_));
+    box = acceleration::AABB(center_ - r, center_ + r);
+    return true;
+}
+
 void Sphere::compute_uv(const Point3& point, float& u, float& v) const {
     // Convert hit point to local coordinates (relative to sphere center)
     Vec3 local_point = point - center_;

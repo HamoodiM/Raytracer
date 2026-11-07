@@ -55,6 +55,14 @@ bool Triangle::hit(const core::Ray& ray, float t_min, float t_max, HitRecord& re
     return true;
 }
 
+bool Triangle::bounding_box(acceleration::AABB& box) const {
+    // Pad slightly so axis-aligned triangles do not get a zero-thickness box
+    const Vec3 pad(1e-4f);
+    box = acceleration::AABB(glm::min(v0_, glm::min(v1_, v2_)) - pad,
+                             glm::max(v0_, glm::max(v1_, v2_)) + pad);
+    return true;
+}
+
 void Triangle::compute_uv(float u, float v, float& out_u, float& out_v) const {
     // For now, use barycentric coordinates directly as UV coordinates
     // In a more advanced implementation, you would store UV coordinates per vertex

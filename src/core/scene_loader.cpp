@@ -71,6 +71,7 @@ Scene SceneLoader::load_scene(const std::string& filename) {
         }
     }
     
+    scene.build_acceleration();
     return scene;
 }
 
