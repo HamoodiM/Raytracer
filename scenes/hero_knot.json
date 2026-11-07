@@ -17,8 +17,8 @@
     ],
     "vfov": 34,
     "aspect_ratio": 1.7778,
-    "aperture": 0.18,
-    "focus_distance": 5.281
+    "aperture": 0.07,
+    "focus_distance": 4.3
   },
   "background": {
     "top": [
