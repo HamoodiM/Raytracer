@@ -78,7 +78,6 @@ Thumbs.db
 !assets/textures/*.jpg
 !assets/textures/*.jpeg
 !renders/*.png
-!docs/images/*.png
 
 # Scene files (keep examples)
 !scenes/*.json
