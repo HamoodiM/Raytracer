@@ -33,14 +33,25 @@ public:
      * @throws std::runtime_error if the file cannot be loaded or parsed
      */
     static Scene load_scene(const std::string& filename);
+
+    /// Builds a scene from already-parsed JSON (see read_json)
+    static Scene load_scene(const nlohmann::json& scene_json);
+
+    /**
+     * @brief Reads and parses a JSON file
+     * @throws std::runtime_error if the file cannot be read or parsed
+     */
+    static nlohmann::json read_json(const std::string& filename);
     
     /**
      * @brief Loads a camera from JSON configuration
      * 
      * @param camera_json JSON object containing camera parameters
+     * @param aspect_ratio_override If > 0, used instead of "aspect_ratio"
+     *        (e.g. width / height of the output image)
      * @return Configured camera object
      */
-    static Camera load_camera(const nlohmann::json& camera_json);
+    static Camera load_camera(const nlohmann::json& camera_json, float aspect_ratio_override = 0.0f);
 
 private:
     /**

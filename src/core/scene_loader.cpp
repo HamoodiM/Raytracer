@@ -16,7 +16,7 @@
 #include "../textures/checker_texture.h"
 #include "../textures/normal_map.h"
 #include "../common.h"
-#include <fstream>
+#include <cstdio>
 #include <iostream>
 #include <stdexcept>
 
@@ -25,19 +25,30 @@
 namespace raytracer {
 namespace core {
 
-Scene SceneLoader::load_scene(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
+nlohmann::json SceneLoader::read_json(const std::string& filename) {
+    // C stdio instead of <fstream>, so this also builds for wasm32-wasi
+    std::FILE* file = std::fopen(filename.c_str(), "rb");
+    if (!file) {
         throw std::runtime_error("Failed to open scene file: " + filename);
     }
-    
-    nlohmann::json scene_json;
+    std::string text;
+    char buffer[4096];
+    size_t n;
+    while ((n = std::fread(buffer, 1, sizeof(buffer), file)) > 0) text.append(buffer, n);
+    std::fclose(file);
+
     try {
-        file >> scene_json;
+        return nlohmann::json::parse(text);
     } catch (const nlohmann::json::exception& e) {
         throw std::runtime_error("Failed to parse JSON: " + std::string(e.what()));
     }
-    
+}
+
+Scene SceneLoader::load_scene(const std::string& filename) {
+    return load_scene(read_json(filename));
+}
+
+Scene SceneLoader::load_scene(const nlohmann::json& scene_json) {
     Scene scene;
     
     // Load objects
@@ -75,12 +86,13 @@ Scene SceneLoader::load_scene(const std::string& filename) {
     return scene;
 }
 
-Camera SceneLoader::load_camera(const nlohmann::json& camera_json) {
+Camera SceneLoader::load_camera(const nlohmann::json& camera_json, float aspect_ratio_override) {
     Point3 position = parse_vec3(camera_json["position"]);
     Point3 look_at = parse_vec3(camera_json["look_at"]);
     Vec3 vup = parse_vec3(camera_json.value("vup", nlohmann::json{0, 1, 0}));
     float vfov = camera_json.value("vfov", 40.0f);
-    float aspect_ratio = camera_json.value("aspect_ratio", 16.0f/9.0f);
+    float aspect_ratio = aspect_ratio_override > 0.0f ? aspect_ratio_override
+                                                      : camera_json.value("aspect_ratio", 16.0f/9.0f);
     float aperture = camera_json.value("aperture", 0.0f);
     float focus_distance = camera_json.value("focus_distance", 1.0f);
     

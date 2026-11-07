@@ -2,6 +2,8 @@
 
 #include "../common.h"
 #include "../core/ray.h"
+#include <cstdint>
+#include <string>
 #include <vector>
 
 namespace raytracer {
@@ -34,7 +36,11 @@ public:
     int height() const { return height_; }
     
     void clear(const Color& color = Color(0, 0, 0));
-    void save_ppm(const std::string& filename) const;
+    void save_ppm(const std::string& filename) const;  // binary PPM (P6)
+    /// Writes PNG or PPM depending on the extension; returns false on error
+    bool save(const std::string& filename) const;
+    /// Display buffer as 8-bit sRGB-ish (gamma 2.2) RGB, rows top to bottom
+    std::vector<uint8_t> to_rgb8() const;
     
     const Color* data() const { return pixels_.data(); }
 

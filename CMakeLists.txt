@@ -17,10 +17,26 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 endif()
 
-# Find required packages
-find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED)
-find_package(glm REQUIRED)
+# GLM: use an installed package if there is one, otherwise the vendored copy
+# in third_party/glm (GLM 1.0.1 "light" release, header-only, MIT licence).
+find_package(glm QUIET)
+if(NOT TARGET glm::glm)
+    message(STATUS "Using vendored GLM from third_party/glm")
+    add_library(glm_vendored INTERFACE)
+    target_include_directories(glm_vendored INTERFACE ${CMAKE_SOURCE_DIR}/third_party/glm)
+    add_library(glm::glm ALIAS glm_vendored)
+endif()
+
+# The interactive viewer needs GLFW + OpenGL. Without them only the headless
+# renderer and the tests are built.
+find_package(OpenGL QUIET)
+find_package(glfw3 QUIET)
+if(OpenGL_FOUND AND glfw3_FOUND)
+    set(RAYTRACER_BUILD_VIEWER ON)
+else()
+    set(RAYTRACER_BUILD_VIEWER OFF)
+    message(STATUS "GLFW/OpenGL not found - building raytracer_cli only (no viewer)")
+endif()
 
 # Find OpenMP (optional)
 find_package(OpenMP)
@@ -92,6 +108,7 @@ set(RENDERING_SOURCES
     src/rendering/integrator.cpp
     src/rendering/framebuffer.cpp
     src/rendering/progressive_renderer.cpp
+    src/rendering/image_io.cpp
 )
 
 set(VIEWER_SOURCES
@@ -131,59 +148,62 @@ set(HEADERS
     src/rendering/integrator.h
     src/rendering/framebuffer.h
     src/rendering/progressive_renderer.h
+    src/rendering/image_io.h
     src/viewer/window.h
     src/viewer/controller.h
     src/viewer/camera_controller.h
 )
 
-# Create executable
-add_executable(raytracer
-    src/main.cpp
+# Everything except the window/viewer code
+add_library(raytracer_core STATIC
     ${CORE_SOURCES}
     ${GEOMETRY_SOURCES}
     ${MATERIAL_SOURCES}
     ${TEXTURE_SOURCES}
     ${ACCELERATION_SOURCES}
     ${RENDERING_SOURCES}
-    ${VIEWER_SOURCES}
-    ${HEADERS}
 )
-
-# Link libraries
-target_link_libraries(raytracer
-    OpenGL::GL
-    glfw
-    glm::glm
-)
-
-# Link OpenMP if available
+target_link_libraries(raytracer_core PUBLIC glm::glm)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(raytracer OpenMP::OpenMP_CXX)
+    target_link_libraries(raytracer_core PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
+# Headless command-line renderer (no GLFW/OpenGL needed)
+add_executable(raytracer_cli src/cli/headless_main.cpp)
+target_link_libraries(raytracer_cli raytracer_core)
+
+# Interactive progressive viewer
+if(RAYTRACER_BUILD_VIEWER)
+    add_executable(raytracer
+        src/main.cpp
+        ${VIEWER_SOURCES}
+        ${HEADERS}
+    )
+    target_link_libraries(raytracer raytracer_core OpenGL::GL glfw)
 endif()
 
 # BVH correctness test: BVH closest hits must equal brute-force closest hits
 enable_testing()
-add_executable(bvh_test
-    tests/bvh_test.cpp
-    ${CORE_SOURCES}
-    ${GEOMETRY_SOURCES}
-    ${MATERIAL_SOURCES}
-    ${TEXTURE_SOURCES}
-    ${ACCELERATION_SOURCES}
-)
-target_link_libraries(bvh_test glm::glm)
+add_executable(bvh_test tests/bvh_test.cpp)
+target_link_libraries(bvh_test raytracer_core)
 add_test(NAME bvh_matches_brute_force COMMAND bvh_test)
 
 # Set output directory
-set_target_properties(raytracer PROPERTIES
+set_target_properties(raytracer_cli bvh_test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
+if(RAYTRACER_BUILD_VIEWER)
+    set_target_properties(raytracer PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif()
 
 # Copy assets to build directory
 file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY scenes DESTINATION ${CMAKE_BINARY_DIR})
 
 # Installation
-install(TARGETS raytracer DESTINATION bin)
+install(TARGETS raytracer_cli DESTINATION bin)
+if(RAYTRACER_BUILD_VIEWER)
+    install(TARGETS raytracer DESTINATION bin)
+endif()
 install(DIRECTORY assets DESTINATION share/raytracer)
 install(DIRECTORY scenes DESTINATION share/raytracer)

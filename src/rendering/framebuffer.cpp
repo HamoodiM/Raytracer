@@ -1,7 +1,7 @@
 #include "framebuffer.h"
 #include "../common.h"
 #include "../core/utils.h"
-#include <fstream>
+#include "image_io.h"
 #include <iostream>
 #include <algorithm>
 
@@ -46,32 +46,39 @@ void Framebuffer::clear(const Color& color) {
     std::fill(accumulation_.begin(), accumulation_.end(), Color(0, 0, 0));
 }
 
-void Framebuffer::save_ppm(const std::string& filename) const {
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open file " << filename << std::endl;
-        return;
-    }
-
-    file << "P3\n" << width_ << " " << height_ << "\n255\n";
-    
+std::vector<uint8_t> Framebuffer::to_rgb8() const {
+    // Gamma 2.2 and clamp to [0, 1]; rows are flipped so the output is top-down
+    // (row 0 of the framebuffer is the bottom of the image).
+    std::vector<uint8_t> rgb(static_cast<size_t>(width_) * height_ * 3);
+    size_t i = 0;
     for (int y = height_ - 1; y >= 0; --y) {
         for (int x = 0; x < width_; ++x) {
-            const Color& pixel = pixels_[y * width_ + x];
-            
-            // Apply gamma correction
+            Color pixel = pixels_[y * width_ + x];
+            for (int c = 0; c < 3; ++c) {
+                if (!(pixel[c] >= 0.0f)) pixel[c] = 0.0f;  // also catches NaN
+            }
             Color corrected = core::gamma_correct(pixel, 2.2f);
-            
-            int ir = static_cast<int>(255.999 * core::clamp(corrected.r, 0.0f, 1.0f));
-            int ig = static_cast<int>(255.999 * core::clamp(corrected.g, 0.0f, 1.0f));
-            int ib = static_cast<int>(255.999 * core::clamp(corrected.b, 0.0f, 1.0f));
-            
-            file << ir << " " << ig << " " << ib << "\n";
+            rgb[i++] = static_cast<uint8_t>(255.999f * core::clamp(corrected.r, 0.0f, 1.0f));
+            rgb[i++] = static_cast<uint8_t>(255.999f * core::clamp(corrected.g, 0.0f, 1.0f));
+            rgb[i++] = static_cast<uint8_t>(255.999f * core::clamp(corrected.b, 0.0f, 1.0f));
         }
     }
-    
-    file.close();
-    std::cout << "Image saved to " << filename << std::endl;
+    return rgb;
+}
+
+bool Framebuffer::save(const std::string& filename) const {
+    if (!write_image(filename, width_, height_, to_rgb8())) {
+        std::cerr << "Error: Could not write " << filename << std::endl;
+        return false;
+    }
+    return true;
+}
+
+void Framebuffer::save_ppm(const std::string& filename) const {
+    if (write_ppm(filename, width_, height_, to_rgb8()))
+        std::cout << "Image saved to " << filename << std::endl;
+    else
+        std::cerr << "Error: Could not open file " << filename << std::endl;
 }
 
 } // namespace rendering
