@@ -4,11 +4,19 @@
 namespace raytracer {
 namespace core {
 
-// Helper function for random float
+// Shared random engine. (Only the engine may be static: a distribution
+// object stores its [min, max) range, so a static distribution would keep
+// whatever range the very first call used.)
+static std::mt19937& generator() {
+    static std::mt19937 gen;
+    return gen;
+}
+
+// Uniform float in [min, max). The range is applied on every call.
 float random_float(float min, float max) {
-    static std::uniform_real_distribution<float> distribution(min, max);
-    static std::mt19937 generator;
-    return distribution(generator);
+    // 24 random bits -> exactly representable float in [0, 1)
+    float unit = static_cast<float>(generator()() >> 8) * (1.0f / 16777216.0f);
+    return min + (max - min) * unit;
 }
 
 // Helper function for random point in unit disk
@@ -51,9 +59,8 @@ Color gamma_correct(const Color& c, float gamma) {
 
 // Helper function for random integer
 int random_int(int min, int max) {
-    static std::uniform_int_distribution<int> distribution(min, max);
-    static std::mt19937 generator;
-    return distribution(generator);
+    std::uniform_int_distribution<int> distribution(min, max);
+    return distribution(generator());
 }
 
 } // namespace core
