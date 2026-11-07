@@ -29,6 +29,8 @@ public:
 
     bool scatter(const core::Ray& ray_in, const geometry::HitRecord& rec, 
                 Color& attenuation, core::Ray& scattered) const override;
+    bool diffuse_brdf(const geometry::HitRecord& rec, Color& albedo,
+                      Vec3& shading_normal) const override;
 
 private:
     std::shared_ptr<textures::Texture> albedo_texture_;

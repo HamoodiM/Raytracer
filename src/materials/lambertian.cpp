@@ -35,5 +35,12 @@ bool Lambertian::scatter(const core::Ray& ray_in, const geometry::HitRecord& rec
     return true;
 }
 
+bool Lambertian::diffuse_brdf(const geometry::HitRecord& rec, Color& albedo,
+                              Vec3& shading_normal) const {
+    albedo = use_texture_ ? texture_->sample(rec.u, rec.v) : solid_albedo_;
+    shading_normal = rec.normal;
+    return true;
+}
+
 } // namespace materials
 } // namespace raytracer

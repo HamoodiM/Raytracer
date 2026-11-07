@@ -40,5 +40,14 @@ bool TexturedLambertian::scatter(const core::Ray& ray_in, const geometry::HitRec
     return true;
 }
 
+bool TexturedLambertian::diffuse_brdf(const geometry::HitRecord& rec, Color& albedo,
+                                      Vec3& shading_normal) const {
+    albedo = albedo_texture_->sample(rec.u, rec.v);
+    // Use the normal-mapped normal for direct light too, otherwise the
+    // normal map would only show up in indirect (bounced) light.
+    shading_normal = normal_map_ ? normal_map_->sample_normal(rec) : rec.normal;
+    return true;
+}
+
 } // namespace materials
 } // namespace raytracer

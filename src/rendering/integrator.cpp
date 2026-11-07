@@ -3,6 +3,8 @@
 #include "../core/utils.h"
 #include "../core/light.h"
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+#include <limits>
 
 namespace raytracer {
 namespace rendering {
@@ -11,25 +13,33 @@ Color Integrator::trace(const core::Ray& ray, const core::Scene& scene, int dept
     return ray_color(ray, scene, depth);
 }
 
-Color Integrator::direct_lighting(const geometry::HitRecord& rec, const core::Scene& scene) const {
-    Color direct = Color(0, 0, 0);
-    
-    // Sample all lights
+Color Integrator::direct_lighting(const geometry::HitRecord& rec, const Color& albedo,
+                                  const Vec3& shading_normal, const core::Scene& scene) const {
+    // Next-event estimation for a Lambertian surface. For each light, one
+    // sample gives the estimator
+    //     f * L * cos(theta) / pdf,   with f = albedo / pi
+    // where pdf is the light sample's density in solid angle (1 for a point
+    // light, whose "radiance" is already intensity / d^2).
+    const float inv_pi = 1.0f / glm::pi<float>();
+    const Color brdf = albedo * inv_pi;
+    Color direct(0.0f);
+
     for (const auto& light : scene.lights()) {
         auto sample = light->sample(rec.point);
-        
-        // Check if light is visible (shadow ray)
+        if (!(sample.pdf > 0.0f)) continue;
+
+        float cos_theta = glm::dot(shading_normal, sample.direction);
+        // Skip lights behind the shading normal or behind the actual surface
+        if (cos_theta <= 0.0f || glm::dot(rec.normal, sample.direction) <= 0.0f) continue;
+
+        // Shadow ray
         core::Ray shadow_ray(rec.point, sample.direction);
         geometry::HitRecord shadow_rec;
-        bool in_shadow = scene.hit(shadow_ray, 0.001f, sample.distance - 0.001f, shadow_rec);
-        
-        if (!in_shadow) {
-            // Lambertian BRDF: albedo / pi * cos(theta)
-            float cos_theta = glm::max(glm::dot(rec.normal, sample.direction), 0.0f);
-            direct += sample.radiance * cos_theta / sample.pdf;
-        }
+        if (scene.hit(shadow_ray, 0.001f, sample.distance - 0.001f, shadow_rec)) continue;
+
+        direct += brdf * sample.radiance * cos_theta / sample.pdf;
     }
-    
+
     return direct;
 }
 
@@ -47,13 +57,18 @@ Color Integrator::ray_color(const core::Ray& ray, const core::Scene& scene, int 
         if (!rec.material->scatter(ray, rec, attenuation, scattered))
             return emitted;
         
-        // Direct lighting (Next Event Estimation)
-        Color direct = direct_lighting(rec, scene);
+        // Direct lighting (next-event estimation), only for diffuse surfaces.
+        // The BRDF (albedo / pi) is applied inside direct_lighting.
+        Color direct(0.0f);
+        Color albedo;
+        Vec3 shading_normal;
+        if (rec.material->diffuse_brdf(rec, albedo, shading_normal))
+            direct = direct_lighting(rec, albedo, shading_normal, scene);
         
         // Indirect lighting (recursive path tracing)
         Color indirect = attenuation * ray_color(scattered, scene, depth - 1);
         
-        return emitted + attenuation * direct + indirect;
+        return emitted + direct + indirect;
     }
     
     // Background (sky) for debugging
