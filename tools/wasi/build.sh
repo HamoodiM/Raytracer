@@ -32,3 +32,4 @@ build() {  # build <name> <main.cpp>
 
 build raytracer_cli src/cli/headless_main.cpp
 build bvh_test tests/bvh_test.cpp
+build bvh_bench tests/bvh_bench.cpp

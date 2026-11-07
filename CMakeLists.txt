@@ -188,8 +188,12 @@ add_executable(bvh_test tests/bvh_test.cpp)
 target_link_libraries(bvh_test raytracer_core)
 add_test(NAME bvh_matches_brute_force COMMAND bvh_test)
 
+# Brute force vs BVH ray-casting benchmark (not a test; prints a table)
+add_executable(bvh_bench tests/bvh_bench.cpp)
+target_link_libraries(bvh_bench raytracer_core)
+
 # Set output directory
-set_target_properties(raytracer_cli bvh_test PROPERTIES
+set_target_properties(raytracer_cli bvh_test bvh_bench PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 if(RAYTRACER_BUILD_VIEWER)
