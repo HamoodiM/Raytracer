@@ -42,8 +42,8 @@ public:
     Color radiance() const override { return emission_; }
 
 private:
-    Point3 center_;
-    Vec3 u_, v_;  // Two edges defining the rectangular area
+    Point3 center_;  // Centre of the rectangle
+    Vec3 u_, v_;     // Full edge vectors: corners are center_ +/- u_/2 +/- v_/2
     Color emission_;
 };
 

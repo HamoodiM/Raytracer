@@ -17,9 +17,10 @@ LightSample PointLight::sample(const Point3& hit_point) const {
 }
 
 LightSample AreaLight::sample(const Point3& hit_point) const {
-    // Random point on rectangle
-    float s = random_float();
-    float t = random_float();
+    // Uniform random point on the rectangle centred on center_ with edge
+    // vectors u_ and v_: center + s*u + t*v with s, t in [-0.5, 0.5).
+    float s = random_float(-0.5f, 0.5f);
+    float t = random_float(-0.5f, 0.5f);
     Point3 light_point = center_ + s * u_ + t * v_;
     
     LightSample sample;
