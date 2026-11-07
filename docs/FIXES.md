@@ -28,6 +28,7 @@ Commits, oldest first:
 | `ab74a56` | Add Russian roulette path termination |
 | `c1ddbc5` | Implement a binned-SAH BVH and use it for scene intersection |
 | `42267be` | Parallelize rendering with OpenMP and give each thread its own RNG |
+| `2e10902` | Add smooth shading for triangle meshes (per-vertex normals) |
 
 ---
 
@@ -307,8 +308,8 @@ brute force must agree on hit/miss, hit distance and which primitive was hit. Re
 
 **Timing:** see the table in the README (`bvh_bench`). Headline numbers (single thread, wasm):
 at 1,058 triangles the SAH BVH casts rays 66x faster than brute force, at 131,072 triangles
-3,513x faster. A full render of the 17,285-object knot scene at 320x180, 4 spp took 0.48 s with
-the BVH and 158.7 s without, and both runs wrote byte-identical images. SAH beats the midpoint
+3,513x faster. A full render of the 17,287-object knot scene at 320x180, 4 spp took 0.44 s with
+the BVH and 111.0 s without, and both runs wrote byte-identical images. SAH beats the midpoint
 split by 8-35% on these meshes, except the 128-triangle one where the midpoint tree is slightly faster.
 
 Why SAH: the midpoint split only looks at where centroids are; SAH also counts how big the
@@ -342,10 +343,55 @@ it builds.
 
 ---
 
-## 9. Known remaining issues
+## 9. Smooth shading for triangle meshes (added after review)
 
-- `Mesh::hit` is still a TODO (OBJ files load as individual triangles instead), and triangles are
-  flat shaded.
+**Problem:** every triangle used its face normal, so a curved mesh looked faceted. On the
+17,280-triangle torus knot the facets read as stripes, because neighbouring faces reflect
+noticeably different directions in a metal.
+
+**Shading normal vs geometric normal.** A triangle now has two normals at a hit:
+
+- the *geometric* normal, cross(v1 - v0, v2 - v0) normalised. It is the real surface, so it
+  decides front/back face (which side of the glass you are on) and whether a direction is above
+  the surface (`HitRecord::geometric_normal`);
+- the *shading* normal, interpolated from the three vertex normals (`HitRecord::normal`). The
+  materials and the BRDF use it, so the lighting varies smoothly across the face.
+
+**Interpolation.** Moller-Trumbore already returns barycentric coordinates (u, v) with
+P = (1 - u - v) * v0 + u * v1 + v * v2. The shading normal uses the same weights:
+
+    n = normalize((1 - u - v) * n0 + u * n1 + v * n2)
+
+It is then flipped, if needed, to the same side as the geometric normal (files sometimes wind
+their faces the other way from their `vn` normals), and finally to face the incoming ray.
+
+**Where vertex normals come from.** If the OBJ has `vn` entries for every face corner, those are
+used. Otherwise each vertex gets the area-weighted average of the faces around it:
+
+    n_vertex = normalize( sum over faces of cross(b - a, c - a) )
+
+The cross product's length is twice the triangle's area, so summing the unnormalised cross
+products weights each face by its area: a big face influences the normal more than a sliver.
+
+**Why keep the geometric normal for some tests.** The interpolated normal can tilt past the real
+surface near silhouettes. If a reflected ray were only checked against the shading normal, it could
+point into the mesh and pass through it. Metal therefore absorbs rays below either normal, and
+direct lighting skips lights below the geometric normal.
+
+The scene flag is `"smooth": true` on an `obj` object (default false, so the old renders are
+unchanged; a flat render after this change is byte-identical to one before it).
+`tests/smooth_normals_test.cpp` checks the area weighting on an octahedron and a two-face case,
+that the interpolated normal matches the barycentric expectation on a tessellated sphere (flat
+normals are off by up to 12 degrees there), the inside/outside orientation, and the OBJ flag with
+and without `vn`.
+
+![Flat vs smooth shading](../renders/knot_flat_vs_smooth.png)
+
+---
+
+## 10. Known remaining issues
+
+- `Mesh::hit` is still a TODO (OBJ files load as individual triangles instead).
 - The GLFW viewer's `SceneGallery` ignores the camera in the scene file and uses a fixed default
   camera. The viewer was not rebuilt or run on this branch (no GLFW/MSVC on the machine used).
 - Tangent frames are not consistent between primitives: on spheres the bitangent points toward -v
