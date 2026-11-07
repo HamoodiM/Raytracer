@@ -80,6 +80,18 @@ Color Integrator::trace(const core::Ray& camera_ray, const core::Scene& scene, i
         // Metal/glass: attenuation is the specular weight.
         throughput *= attenuation;
         ray = scattered;
+
+        // Russian roulette: after a few bounces, continue the path with
+        // probability p and divide the throughput by p. The expected value is
+        // unchanged (p * X/p + (1 - p) * 0 = X), so the image stays unbiased,
+        // but dim paths that contribute little are ended early.
+        // p follows the throughput (capped at 0.95 so no path is immortal).
+        if (rr_start_ > 0 && depth + 1 >= rr_start_) {
+            float p = glm::min(glm::max(throughput.r, glm::max(throughput.g, throughput.b)), 0.95f);
+            if (core::random_float() >= p)
+                break;
+            throughput /= p;
+        }
     }
 
     return radiance;
