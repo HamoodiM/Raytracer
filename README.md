@@ -62,7 +62,7 @@ Flat vs smooth shading of the same knot (left: face normals, right: interpolated
 
 ![Flat vs smooth shading](renders/knot_flat_vs_smooth.png)
 
-Bug fixes on this branch, with before/after renders and the maths behind each one, are written up
+Version 2 bug fixes, with before/after renders and the maths behind each one, are written up
 in [docs/FIXES.md](docs/FIXES.md).
 
 ## BVH performance
