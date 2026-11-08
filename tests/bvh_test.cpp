@@ -55,7 +55,7 @@ core::Scene random_scene(Rng& rng, int triangles, int spheres, bool with_plane) 
         scene.add(std::make_shared<geometry::Sphere>(rng.in_box(10.0f), rng.uniform(0.05f, 1.0f),
                                                     unique_material()));
     }
-    // A few axis-aligned triangles (zero-thickness boxes without padding)
+    // A few axis-aligned triangles (zero thickness on one axis; Triangle::bounding_box pads them by 1e-4)
     for (int i = 0; i < 20; ++i) {
         Point3 c = rng.in_box(8.0f);
         scene.add(std::make_shared<geometry::Triangle>(c, c + Vec3(1, 0, 0), c + Vec3(0, 0, 1),
