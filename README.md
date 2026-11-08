@@ -205,7 +205,7 @@ assets/          generated textures and mesh
 tools/           texture/mesh generators, WebAssembly build
 third_party/glm  GLM 1.0.1
 external/        nlohmann/json, stb_image, glad
-docs/FIXES.md    bug-fix notes
+docs/FIXES.md    version 2 design notes: each fix and addition
 renders/         images and video
 ```
 

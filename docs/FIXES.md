@@ -1,9 +1,7 @@
-# Fixes and additions: study notes
+# Version 2: fixes and additions
 
-These notes go through every bug fixed on the `portfolio-fixes` branch and every feature that was
-claimed in the old README but missing from the code. For each bug they cover what was wrong, why it
-produced the artifact you can see, the fix, and the maths behind it, so you can explain it in an
-interview without notes.
+Design notes for version 2: every bug fix and every feature added. For each bug they cover what was wrong,
+why it produced the artifact you can see, the fix, and the maths behind it.
 
 The code base started from Peter Shirley's *Ray Tracing in One Weekend* series (the camera,
 materials, `scatter()` interface, `random_in_unit_sphere()` and the original BVH stub follow the
@@ -260,7 +258,7 @@ The flag approach is the textbook first step and is unbiased.
 
 ---
 
-## 6. Russian roulette (claimed in the README, was missing)
+## 6. Russian roulette
 
 After `rr_start` bounces (default 3), the path continues with probability
 
@@ -274,7 +272,7 @@ very bright paths from running forever; `max_depth` stays as a hard limit.
 
 ---
 
-## 7. BVH (claimed, was a stub)
+## 7. BVH
 
 **What was there:** `BVHNode::hit()` returned false, no bounding boxes were computed,
 `box_compare()` returned false, the constructor copied the object vector at every level, and the
@@ -317,7 +315,7 @@ children's boxes get, so it avoids splits that leave two large overlapping boxes
 
 ---
 
-## 8. OpenMP and per-thread random numbers (claimed, was missing)
+## 8. OpenMP and per-thread random numbers
 
 CMake found OpenMP and added `-fopenmp`, but no loop used it. Now the row loops in `Renderer` and
 `ProgressiveRenderer` (and the CLI's progressive mode) have
