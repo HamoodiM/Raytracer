@@ -221,6 +221,10 @@ renders/         images and video
 - The viewer and the OpenMP build were not run on the machine used for this branch (renders and
   timings come from the single-threaded WebAssembly build).
 
+## Credits
+
+Written by Mohammad Mohammad while working through the Ray Tracing in One Weekend series (2025). The 2026 version 2 review and fixes were led by me, with Claude Code as a coding assistant; the before/after renders and tests are how each fix was checked.
+
 ## License
 
 This project is for educational and portfolio purposes. Third-party code: GLM (MIT,
