@@ -37,7 +37,11 @@ What is implemented, and where:
 - **Output**: PNG (built-in writer, no zlib) or binary PPM, gamma 2.2 and clamping (no tone
   mapping).
 - **Viewer** (`src/main.cpp`, `src/viewer/`): GLFW window that accumulates one sample per pixel per
-  frame, WASD/QE + right mouse to fly, accumulation resets when the camera moves.
+  frame and draws the running average every frame with `glDrawPixels` (OpenGL 1.1 in a
+  compatibility context, so no function loader), WASD/QE + right mouse to fly, accumulation resets
+  when the camera moves. A `--selftest-frames N` mode reads the window back with `glReadPixels`
+  and checks it against the CPU image; CI runs it under Xvfb with Mesa. Until this fix the window
+  opened but never showed the image (see [docs/FIXES.md](docs/FIXES.md#10-the-viewer-window-never-showed-the-image)).
 
 ### Beyond the book
 
@@ -112,6 +116,10 @@ Targets:
 On macOS: `brew install cmake glfw` (and `libomp` for OpenMP). On Windows with vcpkg:
 `vcpkg install glfw3` and pass `-DCMAKE_TOOLCHAIN_FILE=<vcpkg>/scripts/buildsystems/vcpkg.cmake`.
 
+CI (`.github/workflows/ci.yml`) builds everything and runs `ctest` with GCC on Linux and MSVC on
+Windows, runs the viewer self-test on Linux under Xvfb with Mesa, and builds and runs the
+WebAssembly versions.
+
 ### WebAssembly (no native toolchain)
 
 `tools/wasi/build.sh` compiles the CLI, test and benchmark to wasm32-wasi with `zig c++`, and
@@ -145,8 +153,17 @@ raytracer_cli --scene FILE.json [options]
 ```
 
 Viewer: `./build/bin/raytracer [scene_index]` with scene index 0-4 (the scene gallery in
-`src/core/scene_gallery.cpp`). Controls: WASD move, Q/E up/down, right mouse drag to look, R reset,
-P save a PPM screenshot, Esc quit.
+`src/core/scene_gallery.cpp`), run from the build directory or the repository root. Controls: WASD
+move, Q/E up/down, right mouse drag to look, R reset, P save a PPM screenshot, Esc quit.
+
+```
+raytracer [scene_index] --selftest-frames N [--selftest-out FILE.png] [--selftest-hold-ms MS]
+```
+
+renders N passes in the window, moving the camera once halfway to check that accumulation resets,
+reads the window back with `glReadPixels`, compares it with the CPU image (at most 2 levels per
+channel), saves the read-back as a PNG and exits 0 on a match, 1 otherwise. `--selftest-hold-ms`
+keeps the final image on screen for an outside screenshot.
 
 ## Scene format
 
@@ -204,7 +221,7 @@ scenes/          JSON scenes
 assets/          generated textures and mesh
 tools/           texture/mesh generators, WebAssembly build
 third_party/glm  GLM 1.0.1
-external/        nlohmann/json, stb_image, glad
+external/        nlohmann/json, stb_image
 docs/FIXES.md    version 2 design notes: each fix and addition
 renders/         images and video
 ```
@@ -218,8 +235,9 @@ renders/         images and video
   green channel flipped.
 - The viewer uses a fixed default camera instead of the scene file's camera.
 - No tone mapping beyond gamma 2.2 and clamping.
-- The viewer and the OpenMP build were not run on the machine used for this branch (renders and
-  timings come from the single-threaded WebAssembly build).
+- The renders and timings in this README come from the single-threaded WebAssembly build. The
+  viewer self-test and the OpenMP build run in CI (Linux with Mesa's software OpenGL under Xvfb;
+  Windows/MSVC builds the viewer but does not run it), not on a desktop GPU.
 
 ## Credits
 
@@ -228,4 +246,4 @@ Written by Mohammad Mohammad while working through the Ray Tracing in One Weeken
 ## License
 
 This project is for educational and portfolio purposes. Third-party code: GLM (MIT,
-`third_party/glm/glm/copying.txt`), nlohmann/json (MIT), stb_image (public domain / MIT), glad.
+`third_party/glm/glm/copying.txt`), nlohmann/json (MIT), stb_image (public domain / MIT).

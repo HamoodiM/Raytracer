@@ -2,6 +2,7 @@
 
 #include "primitive.h"
 #include "../materials/material.h"
+#include <array>
 #include <memory>
 #include <vector>
 

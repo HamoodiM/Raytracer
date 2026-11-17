@@ -23,10 +23,10 @@ bool ProgressiveRenderer::render_sample(const core::Camera& camera, const core::
     render_single_sample(camera, scene);
     sample_count_++;
     
-    // Update display every 10 samples for real-time preview
-    if (sample_count_ % 10 == 0 || sample_count_ == target_samples_) {
-        framebuffer_.update_display(sample_count_);
-    }
+    // Refresh the display image after every pass. (It used to refresh every
+    // 10 passes, so after a camera move the window stayed black until 10
+    // passes had accumulated, i.e. it was always black while moving.)
+    framebuffer_.update_display(sample_count_);
     
     return sample_count_ < target_samples_;
 }

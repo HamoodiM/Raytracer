@@ -1,28 +1,40 @@
 #include "window.h"
+#include <cstring>
 #include <iostream>
 
 namespace raytracer {
 namespace viewer {
 
-Window::Window(int width, int height, const std::string& title) 
+Window::Window(int width, int height, const std::string& title)
     : width_(width), height_(height) {
-    
-    // Initialize GLFW
+
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return;
     }
-    
-    // Create window
+
+    // Compatibility context: no minimum version and no core profile, so the
+    // driver returns its compatibility context (legacy 2.1 on macOS, 1.1 on
+    // Windows' software fallback). The OpenGL 1.1 pixel calls used below
+    // exist in all of them and are exported by the system GL library, so no
+    // function loader is needed.
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 1);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
     window_ = glfwCreateWindow(width_, height_, title.c_str(), nullptr, nullptr);
     if (!window_) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
+        std::cerr << "Failed to create GLFW window (OpenGL compatibility context)" << std::endl;
         glfwTerminate();
         return;
     }
-    
-    // Initialize pixel buffer
-    pixel_buffer_.resize(width_ * height_ * 3);  // RGB
+
+    glfwMakeContextCurrent(window_);
+    glfwSwapInterval(1);
+
+    pixel_buffer_.resize(static_cast<size_t>(width_) * height_ * 3);
 }
 
 Window::~Window() {
@@ -40,66 +52,55 @@ void Window::poll_events() {
     glfwPollEvents();
 }
 
-void Window::update() {
-    // For now, just swap buffers - actual drawing happens in display_framebuffer
-    glfwSwapBuffers(window_);
-}
-
 void Window::swap_buffers() {
     glfwSwapBuffers(window_);
 }
 
 void Window::display_framebuffer(const rendering::Framebuffer& framebuffer) {
-    // Convert framebuffer to pixel buffer for potential future display
-    int w = framebuffer.width();
-    int h = framebuffer.height();
-    
-    // Convert float colors to byte values
+    const int w = framebuffer.width();
+    const int h = framebuffer.height();
+
+    // to_rgb8() is top-down; glDrawPixels fills rows bottom-up.
+    const std::vector<uint8_t> rgb = framebuffer.to_rgb8();
+    const size_t row_bytes = static_cast<size_t>(w) * 3;
+    pixel_buffer_.resize(row_bytes * h);
     for (int y = 0; y < h; ++y) {
-        for (int x = 0; x < w; ++x) {
-            auto color = framebuffer.get_pixel(x, y);
-            int idx = (y * w + x) * 3;
-            
-            // Apply gamma correction and clamp
-            float r = std::min(1.0f, std::max(0.0f, std::pow(color.r, 1.0f/2.2f)));
-            float g = std::min(1.0f, std::max(0.0f, std::pow(color.g, 1.0f/2.2f)));
-            float b = std::min(1.0f, std::max(0.0f, std::pow(color.b, 1.0f/2.2f)));
-            
-            pixel_buffer_[idx + 0] = static_cast<unsigned char>(r * 255);
-            pixel_buffer_[idx + 1] = static_cast<unsigned char>(g * 255);
-            pixel_buffer_[idx + 2] = static_cast<unsigned char>(b * 255);
-        }
+        std::memcpy(&pixel_buffer_[(h - 1 - y) * row_bytes], &rgb[y * row_bytes], row_bytes);
     }
-    
-    // Display framebuffer info and sample colors
-    std::cout << "=== FRAMEBUFFER DISPLAY ===" << std::endl;
-    std::cout << "Size: " << w << "x" << h << std::endl;
-    std::cout << "Data pointer: " << framebuffer.data() << std::endl;
-    
-    // Show sample pixels from different areas
-    std::cout << "\nSample pixels:" << std::endl;
-    auto tl = framebuffer.get_pixel(0, h-1);
-    std::cout << "Top-left: (" << tl.r << ", " << tl.g << ", " << tl.b << ")" << std::endl;
-    
-    auto center = framebuffer.get_pixel(w/2, h/2);
-    std::cout << "Center: (" << center.r << ", " << center.g << ", " << center.b << ")" << std::endl;
-    
-    auto tr = framebuffer.get_pixel(w-1, h-1);
-    std::cout << "Top-right: (" << tr.r << ", " << tr.g << ", " << tr.b << ")" << std::endl;
-    
-    auto bl = framebuffer.get_pixel(0, 0);
-    std::cout << "Bottom-left: (" << bl.r << ", " << bl.g << ", " << bl.b << ")" << std::endl;
-    
-    auto br = framebuffer.get_pixel(w-1, 0);
-    std::cout << "Bottom-right: (" << br.r << ", " << br.g << ", " << br.b << ")" << std::endl;
-    
-    std::cout << "\nWindow is open - close it manually to continue." << std::endl;
-    std::cout << "Image saved to: cornell_box.ppm" << std::endl;
+
+    // The drawable can be larger than the window on high-DPI screens; scale to fill it.
+    int fb_w = 0, fb_h = 0;
+    glfwGetFramebufferSize(window_, &fb_w, &fb_h);
+    glViewport(0, 0, fb_w, fb_h);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelZoom(static_cast<float>(fb_w) / w, static_cast<float>(fb_h) / h);
+    glRasterPos2f(-1.0f, -1.0f);  // bottom-left corner of the viewport
+    glDrawPixels(w, h, GL_RGB, GL_UNSIGNED_BYTE, pixel_buffer_.data());
 }
 
-void Window::draw_pixels() {
-    // Placeholder for pixel drawing - could be implemented with OpenGL or other methods
-    // For now, this is handled by the console output and file saving
+std::vector<uint8_t> Window::read_back_rgb8(int& width, int& height) const {
+    glfwGetFramebufferSize(window_, &width, &height);
+    const size_t row_bytes = static_cast<size_t>(width) * 3;
+    std::vector<uint8_t> bottom_up(row_bytes * height);
+
+    glFinish();
+    glReadBuffer(GL_BACK);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, bottom_up.data());
+
+    std::vector<uint8_t> top_down(bottom_up.size());
+    for (int y = 0; y < height; ++y) {
+        std::memcpy(&top_down[y * row_bytes], &bottom_up[(height - 1 - y) * row_bytes], row_bytes);
+    }
+    return top_down;
 }
 
 } // namespace viewer

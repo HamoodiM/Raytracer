@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Linux: CLI, tests and the GLFW viewer. The viewer runs its self-test under
+  # a virtual X server with Mesa's software OpenGL: it renders in the window,
+  # reads the window back with glReadPixels and compares it with the CPU image.
+  # ---------------------------------------------------------------------------
+  linux:
+    name: Linux (GCC, viewer self-test under Xvfb + Mesa)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GLFW, Mesa and Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libglfw3-dev libgl1-mesa-dev libgl1-mesa-dri xvfb xauth imagemagick
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j "$(nproc)"
+
+      - name: Viewer was built
+        run: test -x build/bin/raytracer
+
+      - name: Tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Viewer self-test (Xvfb, Mesa llvmpipe)
+        working-directory: build
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          mkdir -p ../selftest
+          xvfb-run -a -s "-screen 0 1024x768x24" bash -c '
+            ./bin/raytracer 1 --selftest-frames 8 \
+                --selftest-out ../selftest/viewer_readback.png \
+                --selftest-hold-ms 20000 > ../selftest/viewer.log 2>&1 &
+            pid=$!
+            # Once the result is printed the window keeps the final image on
+            # screen; take an X screenshot of it from outside the process.
+            for i in $(seq 1 1200); do
+              grep -q "SELFTEST" ../selftest/viewer.log && break
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 0.5
+            done
+            sleep 1
+            import -window root ../selftest/xvfb_screenshot.png || echo "screenshot failed"
+            wait "$pid"; status=$?
+            cat ../selftest/viewer.log
+            exit $status'
+
+      - name: Upload self-test images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-selftest
+          path: selftest/
+
+  # ---------------------------------------------------------------------------
+  # Windows: MSVC build of the CLI, tests and viewer (GLFW from vcpkg).
+  # The viewer is compiled and linked here but not run (no OpenGL driver).
+  # ---------------------------------------------------------------------------
+  windows:
+    name: Windows (MSVC)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GLFW (vcpkg)
+        run: vcpkg install glfw3:x64-windows
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Viewer was built
+        run: if (-not (Test-Path build/bin/Release/raytracer.exe)) { exit 1 }
+
+      - name: Tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  # ---------------------------------------------------------------------------
+  # WebAssembly: tools/wasi/build.sh with zig, run under Node's WASI.
+  # ---------------------------------------------------------------------------
+  wasi:
+    name: WebAssembly (wasm32-wasi, Node)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install zig
+        run: python -m pip install ziglang==0.16.0
+
+      - name: Build
+        run: ZIG_CXX="python -m ziglang c++" tools/wasi/build.sh
+
+      - name: Tests
+        run: |
+          node tools/wasi/run.mjs build-wasm/bvh_test.wasm
+          node tools/wasi/run.mjs build-wasm/smooth_normals_test.wasm
+
+      - name: Render a small image
+        run: |
+          node tools/wasi/run.mjs build-wasm/raytracer_cli.wasm --scene scenes/hero_cornell.json \
+               --width 160 --height 160 --spp 4 --out cornell_ci.png
+          test -s cornell_ci.png

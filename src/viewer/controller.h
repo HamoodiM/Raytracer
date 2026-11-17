@@ -9,6 +9,7 @@ class Controller {
 public:
     Controller(GLFWwindow* window);
     
+    /// Clears the mouse delta; call once per frame after the delta was used
     void update();
     bool is_key_pressed(int key) const;
     bool is_mouse_button_pressed(int button) const;

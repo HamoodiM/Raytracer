@@ -387,11 +387,46 @@ and without `vn`.
 
 ---
 
-## 10. Known remaining issues
+## 10. The viewer window never showed the image
+
+**What was wrong:** the GLFW window opened, but nothing was ever drawn into it.
+`Window::display_framebuffer` converted the pixels to bytes and then printed a block of debug
+values (sample pixels, "Image saved to: cornell_box.ppm") to the console every frame;
+`draw_pixels()` was an empty placeholder; the context was never made current; and
+`external/glad/glad.c` was a placeholder (not even in the build), so nothing beyond the
+OpenGL 1.1 entry points was loaded. Rendering, accumulation and
+camera movement all ran, so the console looked busy, but the window stayed blank. Before this fix
+the viewer never displayed an image.
+
+**Fix:**
+
+- The window asks for a compatibility context (no core profile), makes it current, and draws the
+  accumulated image every frame with `glDrawPixels` (8-bit RGB from `Framebuffer::to_rgb8`, the
+  same gamma 2.2 conversion as the saved files; rows flipped because GL fills bottom-up;
+  `glPixelZoom` scales it on high-DPI screens). Only OpenGL 1.1 functions are used, and the system
+  GL library exports those directly, so the glad stub was removed instead of replaced.
+- The console spam is gone; the viewer prints the GL version once and an FPS line every 60 frames.
+- `ProgressiveRenderer` refreshed its display image only every 10 passes. After a camera move the
+  accumulation is cleared, so the window would have stayed black for as long as the camera kept
+  moving. It now refreshes after every pass (a multiply per pixel, small next to tracing it).
+- Mouse look could not work: the per-frame mouse delta was cleared just before the camera read
+  it, and each cursor event overwrote the previous one. The delta now accumulates between frames
+  and is cleared after the camera has used it.
+
+**How it is checked:** `raytracer [scene] --selftest-frames N` renders N passes in the window,
+moves the camera once halfway (accumulation must restart at 1 sample), reads the back buffer with
+`glReadPixels`, and compares it with the CPU image: every pixel must be within 2 levels per
+channel, and the reference must not be mostly black (so black == black cannot pass). It saves the
+read-back as a PNG and exits non-zero on a mismatch. CI runs it on Linux under Xvfb with Mesa's
+software OpenGL and keeps the read-back and an X screenshot of the window as artifacts.
+
+---
+
+## 11. Known remaining issues
 
 - `Mesh::hit` is still a TODO (OBJ files load as individual triangles instead).
 - The GLFW viewer's `SceneGallery` ignores the camera in the scene file and uses a fixed default
-  camera. The viewer was not rebuilt or run on this branch (no GLFW/MSVC on the machine used).
+  camera. The viewer is tested in CI (Mesa software OpenGL under Xvfb), not on a desktop GPU.
 - Tangent frames are not consistent between primitives: on spheres the bitangent points toward -v
   (image up, OpenGL-style normal maps), on planes toward +v. Normal maps on planes have their green
   channel flipped.

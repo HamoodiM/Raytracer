@@ -44,8 +44,9 @@ void Controller::mouse_callback(GLFWwindow* window, double xpos, double ypos) {
         controller->first_mouse_ = false;
     }
     
-    controller->mouse_dx_ = xpos - controller->last_mouse_x_;
-    controller->mouse_dy_ = controller->last_mouse_y_ - ypos; // Reversed since y-coordinates go from bottom to top
+    // Accumulate: several cursor events can arrive in one glfwPollEvents()
+    controller->mouse_dx_ += xpos - controller->last_mouse_x_;
+    controller->mouse_dy_ += controller->last_mouse_y_ - ypos; // Reversed since y-coordinates go from bottom to top
     
     controller->last_mouse_x_ = xpos;
     controller->last_mouse_y_ = ypos;
