@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <random>
+#include <cmath>
 
 namespace raytracer {
 namespace core {
@@ -93,7 +94,7 @@ Vec3 reflect(const Vec3& v, const Vec3& n) {
 }
 
 Color gamma_correct(const Color& c, float gamma) {
-    return Color(pow(c.r, 1.0f/gamma), pow(c.g, 1.0f/gamma), pow(c.b, 1.0f/gamma));
+    return Color(std::pow(c.r, 1.0f/gamma), std::pow(c.g, 1.0f/gamma), std::pow(c.b, 1.0f/gamma));
 }
 
 // Helper function for random integer

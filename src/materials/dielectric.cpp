@@ -3,6 +3,7 @@
 #include "../core/utils.h"
 #include "../geometry/primitive.h"
 #include <glm/glm.hpp>
+#include <cmath>
 
 namespace raytracer {
 namespace materials {
@@ -12,7 +13,7 @@ namespace {
         // Schlick's approximation
         auto r0 = (1 - ref_idx) / (1 + ref_idx);
         r0 = r0 * r0;
-        return r0 + (1 - r0) * pow((1 - cosine), 5);
+        return r0 + (1 - r0) * std::pow((1 - cosine), 5);
     }
 }
 
@@ -23,7 +24,7 @@ bool Dielectric::scatter(const core::Ray& ray_in, const geometry::HitRecord& rec
     
     Vec3 unit_direction = glm::normalize(ray_in.direction());
     float cos_theta = fmin(glm::dot(-unit_direction, rec.normal), 1.0f);
-    float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+    float sin_theta = std::sqrt(1.0f - cos_theta * cos_theta);
     
     bool cannot_refract = refraction_ratio * sin_theta > 1.0;
     Vec3 direction;

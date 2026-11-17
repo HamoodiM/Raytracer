@@ -2,6 +2,7 @@
 #include "../common.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+#include <cmath>
 
 namespace raytracer {
 namespace geometry {
@@ -16,7 +17,7 @@ bool Sphere::hit(const core::Ray& ray, float t_min, float t_max, HitRecord& rec)
     if (discriminant < 0) return false;
 
     // Find the nearest root that lies in the acceptable range
-    auto sqrtd = sqrt(discriminant);
+    auto sqrtd = std::sqrt(discriminant);
     auto root = (-half_b - sqrtd) / a;
     if (root < t_min || t_max < root) {
         root = (-half_b + sqrtd) / a;

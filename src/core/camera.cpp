@@ -3,6 +3,7 @@
 #include "utils.h"
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 
 namespace raytracer {
 namespace core {
@@ -48,11 +49,11 @@ void Camera::rotate(float yaw, float pitch) {
     
     // Simple rotation using cross products
     // Yaw rotation around up vector
-    direction = direction * cos(yaw) + glm::cross(up, direction) * sin(yaw);
+    direction = direction * std::cos(yaw) + glm::cross(up, direction) * std::sin(yaw);
     
     // Pitch rotation around right vector
     right = glm::normalize(glm::cross(direction, vup_));
-    direction = direction * cos(pitch) + glm::cross(right, direction) * sin(pitch);
+    direction = direction * std::cos(pitch) + glm::cross(right, direction) * std::sin(pitch);
     
     // Update look-at target
     lookat_ = origin_ + direction;
@@ -66,7 +67,7 @@ void Camera::set_fov(float vfov) {
 
 void Camera::rebuild() {
     auto theta = glm::radians(vfov_);
-    auto h = tan(theta / 2);
+    auto h = std::tan(theta / 2);
     auto viewport_height = 2.0f * h;
     auto viewport_width = aspect_ratio_ * viewport_height;
 
