@@ -4,6 +4,8 @@
  */
 
 #include "image_texture.h"
+#include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
 #include <glm/glm.hpp>

@@ -1,5 +1,6 @@
 #include "plane.h"
 #include "../common.h"
+#include <cmath>
 #include <glm/glm.hpp>
 
 namespace raytracer {
